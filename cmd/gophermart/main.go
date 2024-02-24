@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"flag"
 	"github.com/gam6itko/go-musthave-diploma/internal"
 	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -20,7 +21,7 @@ func init() {
 	}
 
 	var dbDsn string
-	if envVal, exists := os.LookupEnv("DATABASE_DSN"); exists {
+	if envVal, exists := os.LookupEnv("DATABASE_URI"); exists {
 		dbDsn = envVal
 	}
 
@@ -43,10 +44,23 @@ func init() {
 }
 
 func main() {
-	bindAddr := "localhost:8080"
-	if envVal, exists := os.LookupEnv("LISTEN_ADDR"); exists {
-		bindAddr = envVal
+	var bindAddr, dbDsn, accuralAddr string
+	var bindAddrDef, dbDsnDef, accuralAddrDef string
+
+	if tmp, exists := os.LookupEnv("RUN_ADDRESS"); exists {
+		bindAddrDef = tmp
 	}
+	if tmp, exists := os.LookupEnv("DATABASE_URI"); exists {
+		dbDsnDef = tmp
+	}
+	if tmp, exists := os.LookupEnv("ACCRUAL_SYSTEM_ADDRESS"); exists {
+		accuralAddrDef = tmp
+	}
+
+	flag.StringVar(&bindAddr, "a", bindAddrDef, "Net address host:port")
+	flag.StringVar(&dbDsn, "d", dbDsnDef, "Database DSN")
+	flag.StringVar(&accuralAddr, "r", accuralAddrDef, "accural system address")
+	flag.Parse()
 
 	server := &http.Server{
 		Addr:    bindAddr,

@@ -1,0 +1,8 @@
+@jwt = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3MDg3ODY4MDMsIlVzZXJJRCI6Mjh9.e2Ye6aWoqMDxIBIySSML-zFVY_pQlAFn8-PyUS4TxTs
+@orderNumber = 12345678903
+
+POST /api/user/orders
+Content-Type: text/plain
+Authorization: Bearer {{jwt}}
+
+{{orderNumber}}

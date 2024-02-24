@@ -7,6 +7,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"io"
 	"net/http"
+	"strings"
 )
 
 func decodeLoginPass(body io.ReadCloser) (l *internal.LoginPass, err error) {
@@ -128,7 +129,32 @@ func postUserLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 // загрузка пользователем номера заказа для расчёта;
+//
+// Возможные коды ответа:
+// 200 — номер заказа уже был загружен этим пользователем;
+// 202 — новый номер заказа принят в обработку;
+// 400 — неверный формат запроса;
+// 401 — пользователь не аутентифицирован;
+// 409 — номер заказа уже был загружен другим пользователем;
+// 422 — неверный формат номера заказа;
+// 500 — внутренняя ошибка сервера.
 func postUserOrders(w http.ResponseWriter, r *http.Request) {
+	auth := r.Header.Get("Authorization")
+	if auth != "" {
+		http.Error(w, "Authorization header is empty", http.StatusUnauthorized)
+		return
+	}
+	parts := strings.Split(auth, " ")
+	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+		http.Error(w, "invalid Authorization header", http.StatusUnauthorized)
+		return
+	}
+
+	_, err := _jwtIssuer.Parse(parts[1])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 
 }
 
