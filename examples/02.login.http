@@ -1,0 +1,20 @@
+@login = user
+@password = pass
+
+POST http://localhost:8080/api/user/login?{{login}}
+Content-Type: application/json
+
+{
+  "login": "{{login}}",
+  "password": "{{password}}"
+}
+
+> {%
+    client.test("Request executed successfully", function () {
+        client.assert(response.status === 200, response.body);
+    });
+
+    client.test("Response has Authorization header", function () {
+        client.assert(response.headers.valueOf('Authorization') !== '', "No Authorization header");
+    });
+%}

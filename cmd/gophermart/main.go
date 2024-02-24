@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"github.com/gam6itko/go-musthave-diploma/internal"
 	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
@@ -11,6 +12,7 @@ import (
 )
 
 var _db *sql.DB
+var _jwtIssuer *internal.JWTIssuer
 
 func init() {
 	if err := godotenv.Load(); err != nil {
@@ -30,6 +32,14 @@ func init() {
 	if err := _db.Ping(); err != nil {
 		log.Fatal(err)
 	}
+
+	//jwt
+	//jwt token create
+	jwtKey, exists := os.LookupEnv("JWT_KEY")
+	if !exists {
+		log.Fatal("env JWT_KEY not defined")
+	}
+	_jwtIssuer = internal.NewJWTIssuer([]byte(jwtKey))
 }
 
 func main() {

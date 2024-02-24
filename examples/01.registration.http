@@ -1,15 +1,17 @@
+@login = user
+@password = pass
+
 POST localhost:8080/api/user/register
 Content-Type: application/json
 
-
 {
-  "login": "{{$random.email}}",
-  "password": "password"
+  "login": "{{login}}",
+  "password": "{{password}}"
 }
 
 > {%
     client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(response.status === 200, response.body);
     });
 
     client.test("Response has Authorization header", function() {

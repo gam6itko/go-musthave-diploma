@@ -4,25 +4,37 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gam6itko/go-musthave-diploma/internal"
-	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
+	"io"
 	"net/http"
-	"os"
-	"time"
 )
 
+func decodeLoginPass(body io.ReadCloser) (l *internal.LoginPass, err error) {
+	defer body.Close()
+
+	l = new(internal.LoginPass)
+	decoder := json.NewDecoder(body)
+	err = decoder.Decode(l)
+	return
+}
+
 // регистрация пользователя;
-// Статусы ответа:
+//
+// Возможные коды ответа:
 //
 //	200 — пользователь успешно зарегистрирован и аутентифицирован;
 //	400 — неверный формат запроса;
 //	409 — логин уже занят;
 //	500 — внутренняя ошибка сервера.
 func postUserRegister(w http.ResponseWriter, r *http.Request) {
-	l := new(internal.LoginPass)
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(l); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, "invalid Content-Type", http.StatusInternalServerError)
+		return
+	}
+
+	l, err := decodeLoginPass(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if l.Login == nil || l.Password == nil || len(*l.Login) == 0 || len(*l.Password) == 0 {
@@ -36,12 +48,11 @@ func postUserRegister(w http.ResponseWriter, r *http.Request) {
 
 	// check user exists
 	userRepo := internal.NewUserRepository(_db)
-	exists, err := userRepo.IsExists(r.Context(), *l.Login)
+	u, err := userRepo.FindByLogin(r.Context(), *l.Login)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	}
-	if exists {
+	} else if u != nil {
 		http.Error(w, "user already exists", http.StatusConflict)
 		return
 	}
@@ -52,31 +63,14 @@ func postUserRegister(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	id, err := userRepo.InsertNew(r.Context(), *l.Login, string(hashPass))
+	userId, err := userRepo.InsertNew(r.Context(), *l.Login, string(hashPass))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	//jwt token create
-	jwtKey, exists := os.LookupEnv("JWT_KEY")
-	if !exists {
-		jwtKey = "qwerty"
-	}
-	token := jwt.NewWithClaims(
-		jwt.SigningMethodHS256,
-		internal.Claims{
-			RegisteredClaims: jwt.RegisteredClaims{
-				IssuedAt: &jwt.NumericDate{
-					Time: time.Now().UTC(),
-				},
-			},
-			UserID: id,
-		},
-	)
-
-	// создаём строку токена
-	tokenString, err := token.SignedString([]byte(jwtKey))
+	tokenString, err := _jwtIssuer.IssueFor(userId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -87,8 +81,50 @@ func postUserRegister(w http.ResponseWriter, r *http.Request) {
 }
 
 // аутентификация пользователя;
+//
+// Возможные коды ответа:
+// 200 — пользователь успешно аутентифицирован;
+// 400 — неверный формат запроса;
+// 401 — неверная пара логин/пароль;
+// 500 — внутренняя ошибка сервера.
 func postUserLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, "invalid Content-Type", http.StatusInternalServerError)
+		return
+	}
 
+	l, err := decodeLoginPass(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	userRepo := internal.NewUserRepository(_db)
+	u, err := userRepo.FindByLogin(r.Context(), *l.Login)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	} else if u == nil {
+		// wrong user or password
+		http.Error(w, "user does not exists ^_^", http.StatusUnauthorized)
+		return
+	}
+
+	if err = bcrypt.CompareHashAndPassword(u.PasswordHash, []byte(*l.Password)); err != nil {
+		// wrong user or password
+		http.Error(w, "wrong user password ^_^", http.StatusUnauthorized)
+		return
+	}
+
+	//jwt issue
+	tokenString, err := _jwtIssuer.IssueFor(u.Id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Authorization", fmt.Sprintf("Bearer %s", tokenString))
+	w.WriteHeader(200)
 }
 
 // загрузка пользователем номера заказа для расчёта;

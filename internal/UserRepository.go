@@ -3,7 +3,14 @@ package internal
 import (
 	"context"
 	"database/sql"
+	"errors"
 )
+
+type User struct {
+	Id           int64
+	Login        string
+	PasswordHash []byte
+}
 
 type UserRepository struct {
 	db *sql.DB
@@ -15,21 +22,23 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 	}
 }
 
-func (ths UserRepository) IsExists(ctx context.Context, login string) (exists bool, err error) {
-	var cnt int
-	err = ths.db.
+func (ths UserRepository) FindByLogin(ctx context.Context, login string) (*User, error) {
+	u := new(User)
+	err := ths.db.
 		QueryRowContext(
 			ctx,
-			`SELECT COUNT("id") FROM "user" WHERE "login" = $1`,
+			`SELECT "id", "login", "password" FROM "user" WHERE "login" = $1`,
 			login,
 		).
-		Scan(&cnt)
+		Scan(&u.Id, &u.Login, &u.PasswordHash)
 	if err != nil {
-		return
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
 	}
 
-	exists = cnt > 0
-	return
+	return u, nil
 }
 
 func (ths UserRepository) InsertNew(ctx context.Context, login string, hashPass string) (id int64, err error) {
