@@ -2,14 +2,12 @@ package main
 
 import (
 	"database/sql"
-	"flag"
 	"github.com/gam6itko/go-musthave-diploma/internal"
 	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
 	"log"
 	"net/http"
-	"os"
 )
 
 var _db *sql.DB
@@ -20,54 +18,16 @@ func init() {
 		log.Fatal(err)
 	}
 
-	var dbDsn string
-	if envVal, exists := os.LookupEnv("DATABASE_URI"); exists {
-		dbDsn = envVal
-	}
-
-	var err error
-	_db, err = sql.Open("pgx", dbDsn)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err := _db.Ping(); err != nil {
-		log.Fatal(err)
-	}
-
-	//jwt
-	//jwt token create
-	jwtKey, exists := os.LookupEnv("JWT_KEY")
-	if !exists {
-		log.Fatal("env JWT_KEY not defined")
-	}
-	_jwtIssuer = internal.NewJWTIssuer([]byte(jwtKey))
+	_jwtIssuer = internal.NewJWTIssuer(_appConfig.jwtKey)
 }
 
 func main() {
-	var bindAddr, dbDsn, accuralAddr string
-	var bindAddrDef, dbDsnDef, accuralAddrDef string
-
-	if tmp, exists := os.LookupEnv("RUN_ADDRESS"); exists {
-		bindAddrDef = tmp
-	}
-	if tmp, exists := os.LookupEnv("DATABASE_URI"); exists {
-		dbDsnDef = tmp
-	}
-	if tmp, exists := os.LookupEnv("ACCRUAL_SYSTEM_ADDRESS"); exists {
-		accuralAddrDef = tmp
-	}
-
-	flag.StringVar(&bindAddr, "a", bindAddrDef, "Net address host:port")
-	flag.StringVar(&dbDsn, "d", dbDsnDef, "Database DSN")
-	flag.StringVar(&accuralAddr, "r", accuralAddrDef, "accural system address")
-	flag.Parse()
-
 	server := &http.Server{
-		Addr:    bindAddr,
+		Addr:    _appConfig.listenAdd,
 		Handler: newRouter(),
 	}
 
-	log.Printf("Starting server on %s", bindAddr)
+	log.Printf("Starting server on %s", _appConfig.listenAdd)
 	if err := server.ListenAndServe(); err != nil {
 		// записываем в лог ошибку, если сервер не запустился
 		log.Printf(err.Error())
