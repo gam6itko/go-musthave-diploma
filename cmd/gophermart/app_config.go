@@ -18,7 +18,7 @@ var _appConfig *appConfig
 
 func init() {
 	if err := godotenv.Load(); err != nil {
-		log.Fatal(err)
+		log.Print(err)
 	}
 
 	_appConfig = buildAppConfig()

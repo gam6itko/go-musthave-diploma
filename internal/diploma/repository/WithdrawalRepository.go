@@ -38,9 +38,6 @@ func (ths WithdrawalRepository) rowsToOrders(rows *sql.Rows) ([]*diploma.Withdra
 		if err != nil {
 			return nil, err
 		}
-		if err != nil {
-			return nil, err
-		}
 
 		result = append(result, w)
 	}
