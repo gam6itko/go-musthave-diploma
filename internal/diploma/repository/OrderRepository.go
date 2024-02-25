@@ -1,9 +1,10 @@
-package diploma
+package repository
 
 import (
 	"context"
 	"database/sql"
 	"errors"
+	"github.com/gam6itko/go-musthave-diploma/internal/diploma"
 )
 
 type OrderRepository struct {
@@ -16,8 +17,9 @@ func NewOrderRepository(db *sql.DB) *OrderRepository {
 	}
 }
 
-func (ths OrderRepository) FindByID(ctx context.Context, orderID uint64) (*Order, error) {
-	u := new(Order)
+// В реальных проектах, конечно должна быть пагинация.
+func (ths OrderRepository) FindByID(ctx context.Context, orderID uint64) (*diploma.Order, error) {
+	u := new(diploma.Order)
 	err := ths.db.
 		QueryRowContext(
 			ctx,
@@ -35,7 +37,7 @@ func (ths OrderRepository) FindByID(ctx context.Context, orderID uint64) (*Order
 	return u, nil
 }
 
-func (ths OrderRepository) InsertNew(ctx context.Context, order *Order) (err error) {
+func (ths OrderRepository) InsertNew(ctx context.Context, order *diploma.Order) (err error) {
 	_, err = ths.db.ExecContext(
 		ctx,
 		`INSERT INTO "order" ("id", "user_id") VALUES ($1, $2)`,
@@ -45,7 +47,7 @@ func (ths OrderRepository) InsertNew(ctx context.Context, order *Order) (err err
 	return
 }
 
-func (ths OrderRepository) FindByStatus(ctx context.Context, status OrderStatus) ([]*Order, error) {
+func (ths OrderRepository) FindByStatus(ctx context.Context, status diploma.OrderStatus) ([]*diploma.Order, error) {
 	rows, err := ths.db.
 		QueryContext(
 			ctx,
@@ -59,7 +61,7 @@ func (ths OrderRepository) FindByStatus(ctx context.Context, status OrderStatus)
 	return ths.rowsToOrders(rows)
 }
 
-func (ths OrderRepository) UpdateStatus(ctx context.Context, orderID uint64, status OrderStatus, accural float64) (err error) {
+func (ths OrderRepository) UpdateStatus(ctx context.Context, orderID uint64, status diploma.OrderStatus, accural float64) (err error) {
 	_, err = ths.db.ExecContext(
 		ctx,
 		`UPDATE "order" SET "status" = $1, "accural" = $2 WHERE "id" = $3`,
@@ -70,7 +72,7 @@ func (ths OrderRepository) UpdateStatus(ctx context.Context, orderID uint64, sta
 	return
 }
 
-func (ths OrderRepository) GetUserOrders(ctx context.Context, userID uint64) ([]*Order, error) {
+func (ths OrderRepository) FindByUserID(ctx context.Context, userID uint64) ([]*diploma.Order, error) {
 	rows, err := ths.db.
 		QueryContext(
 			ctx,
@@ -84,16 +86,16 @@ func (ths OrderRepository) GetUserOrders(ctx context.Context, userID uint64) ([]
 	return ths.rowsToOrders(rows)
 }
 
-func (ths OrderRepository) rowsToOrders(rows *sql.Rows) ([]*Order, error) {
-	result := make([]*Order, 0)
+func (ths OrderRepository) rowsToOrders(rows *sql.Rows) ([]*diploma.Order, error) {
+	result := make([]*diploma.Order, 0)
 	for rows.Next() {
-		o := &Order{}
+		o := &diploma.Order{}
 		var status string
 		err := rows.Scan(&o.ID, &o.UserID, status)
 		if err != nil {
 			return nil, err
 		}
-		o.Status, err = OrderStatusFromString(status)
+		o.Status, err = diploma.OrderStatusFromString(status)
 		if err != nil {
 			return nil, err
 		}

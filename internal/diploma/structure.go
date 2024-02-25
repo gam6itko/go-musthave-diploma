@@ -1,9 +1,7 @@
 package diploma
 
 import (
-	"fmt"
 	"github.com/golang-jwt/jwt/v5"
-	"strings"
 )
 
 type LoginPass struct {
@@ -16,14 +14,6 @@ type Claims struct {
 	UserID uint64
 }
 
-type User struct {
-	ID              uint64
-	Login           string
-	PasswordHash    []byte
-	BalanceCurrent  float32
-	BalanceWithdraw float32
-}
-
 type UserBalanceResponse struct {
 	Current  float32 `json:"current"`
 	Withdraw float32 `json:"withdraw"`
@@ -34,54 +24,20 @@ type WithdrawRequest struct {
 	Sum   float32 `json:"sum"`
 }
 
-type OrderStatus byte
-
-func OrderStatusFromString(str string) (s OrderStatus, err error) {
-	switch strings.ToUpper(str) {
-	case "REGISTERED":
-		s = StatusRegistered
-		return
-	case "INVALID":
-		s = StatusInvalid
-		return
-	case "PROCESSING":
-		s = StatusProcessing
-		return
-	case "PROCESSED":
-		s = StatusProcessed
-		return
-	default:
-		err = fmt.Errorf("unknown status: %s", str)
-	}
-
-	return
-}
-
-const (
-	// Статуса нет Accural. Это для внутреннего пользования.
-	StatusNew OrderStatus = iota
-
-	// заказ зарегистрирован, но вознаграждение не рассчитано;
-	StatusRegistered
-
-	//заказ не принят к расчёту, и вознаграждение не будет начислено;
-	StatusInvalid
-
-	//расчёт начисления в процессе;
-	StatusProcessing
-
-	//расчёт начисления окончен;
-	StatusProcessed
-)
-
-type Order struct {
-	ID      uint64
-	UserID  uint64
-	Status  OrderStatus
-	Accural float64
-}
-
 type Accural struct {
 	OrderNumber string `json:"order"`
 	Status      string `json:"status"`
+}
+
+type WithdrawalResponse struct {
+	Order       string  `json:"order"`
+	ProcessedAt string  `json:"processed_at"`
+	Sum         float32 `json:"sum"`
+}
+
+type OrderResponse struct {
+	Number     string  `json:"number"`
+	Status     string  `json:"status"`
+	UploadedAt string  `json:"uploaded_at"`
+	Accural    float32 `json:"accural"`
 }

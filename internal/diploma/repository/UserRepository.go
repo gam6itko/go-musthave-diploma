@@ -1,9 +1,10 @@
-package diploma
+package repository
 
 import (
 	"context"
 	"database/sql"
 	"errors"
+	"github.com/gam6itko/go-musthave-diploma/internal/diploma"
 )
 
 type UserRepository struct {
@@ -16,8 +17,8 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 	}
 }
 
-func (ths UserRepository) FindByLogin(ctx context.Context, login string) (*User, error) {
-	u := new(User)
+func (ths UserRepository) FindByLogin(ctx context.Context, login string) (*diploma.User, error) {
+	u := new(diploma.User)
 	err := ths.db.
 		QueryRowContext(
 			ctx,
@@ -35,8 +36,8 @@ func (ths UserRepository) FindByLogin(ctx context.Context, login string) (*User,
 	return u, nil
 }
 
-func (ths UserRepository) FindByID(ctx context.Context, userID uint64) (*User, error) {
-	u := new(User)
+func (ths UserRepository) FindByID(ctx context.Context, userID uint64) (*diploma.User, error) {
+	u := new(diploma.User)
 	err := ths.db.
 		QueryRowContext(
 			ctx,
@@ -75,14 +76,30 @@ func (ths UserRepository) Withdraw(ctx context.Context, userID uint64, orderID u
 	defer tx.Rollback()
 
 	_, err = tx.Exec(
-		`UPDATE "user SET 
+		`UPDATE "user" SET 
 	"balance_current" = "balance_current" - $1, 
 	"balance_withdraw" = "balance_withdraw" + $1 
 WHERE "id" = $2`,
 		sum,
 		userID,
 	)
-	//todo insert into withdrawals
+	if err != nil {
+		return
+	}
+
+	_, err = tx.Exec(
+		`INSERT INTO "withdrawal" ("user_id", "order_id", "sum") VALUES ($1, $2, $3)`,
+		userID,
+		orderID,
+		sum,
+	)
+	if err != nil {
+		return
+	}
+	err = tx.Commit()
+	if err != nil {
+		return
+	}
 
 	return
 }

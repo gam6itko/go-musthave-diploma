@@ -1,15 +1,18 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/gam6itko/go-musthave-diploma/internal/diploma"
+	"github.com/gam6itko/go-musthave-diploma/internal/diploma/repository"
 	"golang.org/x/crypto/bcrypt"
 	"io"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func decodeLoginPass(body io.ReadCloser) (l *diploma.LoginPass, err error) {
@@ -50,7 +53,7 @@ func authenticate(w http.ResponseWriter, r *http.Request) (userID uint64, succes
 //	400 — неверный формат запроса;
 //	409 — логин уже занят;
 //	500 — внутренняя ошибка сервера.
-func postUserRegister(w http.ResponseWriter, r *http.Request) {
+func postUserRegister(w http.ResponseWriter, r *http.Request, db *sql.DB, jwtIssuer *diploma.JWTIssuer) {
 	if r.Header.Get("Content-Type") != "application/json" {
 		http.Error(w, "invalid Content-Type", http.StatusBadRequest)
 		return
@@ -71,7 +74,7 @@ func postUserRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// check user exists
-	userRepo := diploma.NewUserRepository(_db)
+	userRepo := repository.NewUserRepository(db)
 	u, err := userRepo.FindByLogin(r.Context(), *l.Login)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -94,7 +97,7 @@ func postUserRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//jwt token create
-	tokenString, err := _jwtIssuer.Issue(userID)
+	tokenString, err := jwtIssuer.Issue(userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -111,7 +114,7 @@ func postUserRegister(w http.ResponseWriter, r *http.Request) {
 // 400 — неверный формат запроса;
 // 401 — неверная пара логин/пароль;
 // 500 — внутренняя ошибка сервера.
-func postUserLogin(w http.ResponseWriter, r *http.Request) {
+func postUserLogin(w http.ResponseWriter, r *http.Request, db *sql.DB, jwtIssuer *diploma.JWTIssuer) {
 	if r.Header.Get("Content-Type") != "application/json" {
 		http.Error(w, "invalid Content-Type", http.StatusBadRequest)
 		return
@@ -123,7 +126,7 @@ func postUserLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userRepo := diploma.NewUserRepository(_db)
+	userRepo := repository.NewUserRepository(db)
 	u, err := userRepo.FindByLogin(r.Context(), *l.Login)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -141,7 +144,7 @@ func postUserLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//jwt issue
-	tokenString, err := _jwtIssuer.Issue(u.ID)
+	tokenString, err := jwtIssuer.Issue(u.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -161,7 +164,7 @@ func postUserLogin(w http.ResponseWriter, r *http.Request) {
 // 409 — номер заказа уже был загружен другим пользователем;
 // 422 — неверный формат номера заказа;
 // 500 — внутренняя ошибка сервера.
-func postUserOrders(w http.ResponseWriter, r *http.Request) {
+func postUserOrders(w http.ResponseWriter, r *http.Request, db *sql.DB, accClient *diploma.AccuralClient) {
 	userID, success := authenticate(w, r)
 	if !success {
 		return
@@ -191,7 +194,7 @@ func postUserOrders(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "orderID validation fail", http.StatusUnprocessableEntity)
 		return
 	}
-	repo := diploma.NewOrderRepository(_db)
+	repo := repository.NewOrderRepository(db)
 	orderEntity, err := repo.FindByID(r.Context(), orderID)
 	if err != nil {
 		http.Error(w, "order check fail", http.StatusInternalServerError)
@@ -210,7 +213,7 @@ func postUserOrders(w http.ResponseWriter, r *http.Request) {
 		ID:     orderID,
 		UserID: userID,
 	}
-	if acc, err := _accClient.Get(orderID); err != nil {
+	if acc, err := accClient.Get(orderID); err != nil {
 		log.Printf("failed to get accural info. %s", err)
 	} else {
 		if s, sErr := diploma.OrderStatusFromString(acc.Status); sErr != nil {
@@ -233,13 +236,13 @@ func postUserOrders(w http.ResponseWriter, r *http.Request) {
 }
 
 // получение списка загруженных пользователем номеров заказов, статусов их обработки и информации о начислениях;
-func getUserOrders(w http.ResponseWriter, r *http.Request) {
+func getUserOrders(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	userID, success := authenticate(w, r)
 	if !success {
 		return
 	}
-	repo := diploma.NewOrderRepository(_db)
-	orderList, err := repo.GetUserOrders(r.Context(), userID)
+	repo := repository.NewOrderRepository(db)
+	orderList, err := repo.FindByUserID(r.Context(), userID)
 	if err != nil {
 		http.Error(w, "fail to get orders", http.StatusInternalServerError)
 		return
@@ -249,6 +252,21 @@ func getUserOrders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	responseData := make([]*diploma.OrderResponse, len(orderList))
+	for i, o := range orderList {
+		statusStr, err := diploma.OrderStatusToString(o.Status)
+		if err != nil {
+			http.Error(w, "no orders", http.StatusNoContent)
+			return
+		}
+		responseData[i] = &diploma.OrderResponse{
+			Number:     strconv.FormatUint(o.ID, 10),
+			UploadedAt: o.UploadedAt.Format(time.RFC3339),
+			Status:     statusStr,
+			Accural:    o.Accural,
+		}
+	}
+
 	encoder := json.NewEncoder(w)
 	if err := encoder.Encode(orderList); err != nil {
 		log.Println(err.Error())
@@ -256,12 +274,12 @@ func getUserOrders(w http.ResponseWriter, r *http.Request) {
 }
 
 // получение текущего баланса счёта баллов лояльности пользователя;
-func getUserBalance(w http.ResponseWriter, r *http.Request) {
+func getUserBalance(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	userID, success := authenticate(w, r)
 	if !success {
 		return
 	}
-	repo := diploma.NewUserRepository(_db)
+	repo := repository.NewUserRepository(db)
 	u, err := repo.FindByID(r.Context(), userID)
 	if err != nil {
 		http.Error(w, "fail to retrieve user data", http.StatusInternalServerError)
@@ -279,7 +297,7 @@ func getUserBalance(w http.ResponseWriter, r *http.Request) {
 }
 
 // запрос на списание баллов с накопительного счёта в счёт оплаты нового заказа;
-func postUserBalanceWithdraw(w http.ResponseWriter, r *http.Request) {
+func postUserBalanceWithdraw(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	userID, success := authenticate(w, r)
 	if !success {
 		return
@@ -298,7 +316,7 @@ func postUserBalanceWithdraw(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	repo := diploma.NewUserRepository(_db)
+	repo := repository.NewUserRepository(db)
 	u, err := repo.FindByID(r.Context(), userID)
 	if err != nil {
 		http.Error(w, "fail to retrieve user data", http.StatusInternalServerError)
@@ -318,9 +336,30 @@ func postUserBalanceWithdraw(w http.ResponseWriter, r *http.Request) {
 }
 
 // получение информации о выводе средств с накопительного счёта пользователем.
-func getUserWithdrawals(w http.ResponseWriter, r *http.Request) {
+func getUserWithdrawals(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	userID, success := authenticate(w, r)
 	if !success {
 		return
+	}
+
+	repo := repository.NewWithdrawalRepository(db)
+	wList, err := repo.FindByUserID(r.Context(), userID)
+	if err != nil {
+		http.Error(w, "fail to get withdrawal list", http.StatusInternalServerError)
+		return
+	}
+
+	responseData := make([]*diploma.WithdrawalResponse, len(wList))
+	for i, w := range wList {
+		responseData[i] = &diploma.WithdrawalResponse{
+			Order:       strconv.FormatUint(w.OrderID, 10),
+			ProcessedAt: w.ProcessedAt.Format(time.RFC3339),
+			Sum:         w.Sum,
+		}
+	}
+	encoder := json.NewEncoder(w)
+	err = encoder.Encode(responseData)
+	if err != nil {
+		log.Printf("encode error: %s", err)
 	}
 }

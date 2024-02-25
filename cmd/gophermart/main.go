@@ -55,13 +55,22 @@ func initDatabaseSchema(db *sql.DB) error {
 
 CREATE TABLE IF NOT EXISTS public.order
 (
-    id  int PRIMARY KEY,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    id  		BIGINT PRIMARY KEY,
+    created_at 	TIMESTAMP NOT NULL DEFAULT NOW(),
+    user_id 	BIGINT,
+    status 		SMALLINT,
+    sum NUMERIC(7,2),
+    CONSTRAINT fk_user FOREIGN KEY(user_id) REFERENCES "user"(id)
+);
+
+CREATE TABLE IF NOT EXISTS public.withdrawal
+(
+    id  BIGSERIAL PRIMARY KEY,
+    processed_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    order_id BIGINT,
     user_id BIGINT,
-    status smallint,
-    CONSTRAINT fk_user
-        FOREIGN KEY(user_id)
-            REFERENCES "user"(id)
+    sum NUMERIC(7,2),
+    CONSTRAINT fk_user FOREIGN KEY(user_id) REFERENCES "user"(id)
 );`
 	_, err := db.Exec(sqlQuery)
 	return err
@@ -92,13 +101,30 @@ func newRouter() chi.Router {
 		})
 	})
 
-	r.Post("/api/user/register", postUserRegister)
-	r.Post("/api/user/login", postUserLogin)
-	r.Post("/api/user/orders", postUserOrders)
-	r.Get("/api/user/orders", getUserOrders)
-	r.Get("/api/user/balance", getUserBalance)
-	r.Post("/api/user/balance/withdraw", postUserBalanceWithdraw)
-	r.Get("/api/user/withdrawals", getUserWithdrawals)
+	r.Use(compressMiddleware)
+
+	// ниже попытка поиграться в DI и тестирование
+	r.Post("/api/user/register", func(w http.ResponseWriter, r *http.Request) {
+		postUserRegister(w, r, _db, _jwtIssuer)
+	})
+	r.Post("/api/user/login", func(w http.ResponseWriter, r *http.Request) {
+		postUserLogin(w, r, _db, _jwtIssuer)
+	})
+	r.Post("/api/user/orders", func(w http.ResponseWriter, r *http.Request) {
+		postUserOrders(w, r, _db, _accClient)
+	})
+	r.Get("/api/user/orders", func(w http.ResponseWriter, r *http.Request) {
+		getUserOrders(w, r, _db)
+	})
+	r.Get("/api/user/balance", func(w http.ResponseWriter, r *http.Request) {
+		getUserBalance(w, r, _db)
+	})
+	r.Post("/api/user/balance/withdraw", func(w http.ResponseWriter, r *http.Request) {
+		postUserBalanceWithdraw(w, r, _db)
+	})
+	r.Get("/api/user/withdrawals", func(w http.ResponseWriter, r *http.Request) {
+		getUserWithdrawals(w, r, _db)
+	})
 
 	return r
 }
