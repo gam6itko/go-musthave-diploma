@@ -16,7 +16,7 @@ func NewOrderRepository(db *sql.DB) *OrderRepository {
 	}
 }
 
-func (ths OrderRepository) FindById(ctx context.Context, orderID uint64) (*Order, error) {
+func (ths OrderRepository) FindByID(ctx context.Context, orderID uint64) (*Order, error) {
 	u := new(Order)
 	err := ths.db.
 		QueryRowContext(
@@ -82,13 +82,13 @@ func (ths OrderRepository) FindByStatus(ctx context.Context, status OrderStatus)
 	return result, nil
 }
 
-func (ths OrderRepository) UpdateStatus(ctx context.Context, orderId uint64, status OrderStatus, accural float64) (err error) {
+func (ths OrderRepository) UpdateStatus(ctx context.Context, orderID uint64, status OrderStatus, accural float64) (err error) {
 	_, err = ths.db.ExecContext(
 		ctx,
 		`UPDATE "order" SET "status" = $1, "accural" = $2 WHERE "id" = $3`,
 		status,
 		accural,
-		orderId,
+		orderID,
 	)
 	return
 }

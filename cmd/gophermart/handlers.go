@@ -183,7 +183,7 @@ func postUserOrders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	repo := diploma.NewOrderRepository(_db)
-	orderEntity, err := repo.FindById(r.Context(), orderID)
+	orderEntity, err := repo.FindByID(r.Context(), orderID)
 	if err != nil {
 		http.Error(w, "order check fail", http.StatusInternalServerError)
 		return
