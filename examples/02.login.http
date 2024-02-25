@@ -3,6 +3,7 @@
 
 POST {{host}}/api/user/login?{{login}}
 Content-Type: application/json
+Accept-Encoding: none
 
 {
   "login": "{{login}}",

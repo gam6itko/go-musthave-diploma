@@ -52,6 +52,7 @@ func (ths AccuralClient) Get(orderID uint64) (acc *Accural, err error) {
 
 	decoder := json.NewDecoder(resp.Body)
 	defer resp.Body.Close()
+	acc = new(Accural)
 	err = decoder.Decode(acc)
 	if err != nil {
 		return

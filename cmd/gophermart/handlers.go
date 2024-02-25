@@ -220,6 +220,8 @@ func postUserOrders(w http.ResponseWriter, r *http.Request, db *sql.DB, accClien
 			log.Printf("failed to get accural status. %s", sErr)
 		} else {
 			order.Status = s
+			order.Accural = acc.Accrual
+			log.Printf("accural: %s, %s, %f", acc.OrderNumber, acc.Status, acc.Accrual)
 		}
 	}
 
@@ -267,8 +269,9 @@ func getUserOrders(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		}
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	encoder := json.NewEncoder(w)
-	if err := encoder.Encode(orderList); err != nil {
+	if err := encoder.Encode(responseData); err != nil {
 		log.Println(err.Error())
 	}
 }
@@ -286,6 +289,7 @@ func getUserBalance(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	encoder := json.NewEncoder(w)
 	err = encoder.Encode(&diploma.UserBalanceResponse{
 		Current:  u.BalanceCurrent,
@@ -304,8 +308,9 @@ func postUserBalanceWithdraw(w http.ResponseWriter, r *http.Request, db *sql.DB)
 	}
 
 	reqData := new(diploma.WithdrawRequest)
-	e := json.NewEncoder(w)
-	if err := e.Encode(reqData); err != nil {
+	decoder := json.NewDecoder(r.Body)
+	defer r.Body.Close()
+	if err := decoder.Decode(reqData); err != nil {
 		http.Error(w, "fail to decode request body", http.StatusBadRequest)
 		return
 	}
@@ -331,8 +336,6 @@ func postUserBalanceWithdraw(w http.ResponseWriter, r *http.Request, db *sql.DB)
 		http.Error(w, "fail to withdraw", http.StatusInternalServerError)
 		return
 	}
-
-	w.WriteHeader(http.StatusOK)
 }
 
 // получение информации о выводе средств с накопительного счёта пользователем.
@@ -358,8 +361,7 @@ func getUserWithdrawals(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		}
 	}
 	encoder := json.NewEncoder(w)
-	err = encoder.Encode(responseData)
-	if err != nil {
+	if err = encoder.Encode(responseData); err != nil {
 		log.Printf("encode error: %s", err)
 	}
 }

@@ -40,9 +40,11 @@ func (ths OrderRepository) FindByID(ctx context.Context, orderID uint64) (*diplo
 func (ths OrderRepository) InsertNew(ctx context.Context, order *diploma.Order) (err error) {
 	_, err = ths.db.ExecContext(
 		ctx,
-		`INSERT INTO "order" ("id", "user_id") VALUES ($1, $2)`,
+		`INSERT INTO "order" ("id", "user_id", "status", "sum") VALUES ($1, $2, $3, $4)`,
 		order.ID,
 		order.UserID,
+		order.Status,
+		order.Accural,
 	)
 	return
 }
@@ -90,12 +92,7 @@ func (ths OrderRepository) rowsToOrders(rows *sql.Rows) ([]*diploma.Order, error
 	result := make([]*diploma.Order, 0)
 	for rows.Next() {
 		o := &diploma.Order{}
-		var status string
-		err := rows.Scan(&o.ID, &o.UserID, status)
-		if err != nil {
-			return nil, err
-		}
-		o.Status, err = diploma.OrderStatusFromString(status)
+		err := rows.Scan(&o.ID, &o.UserID, &o.Status)
 		if err != nil {
 			return nil, err
 		}
