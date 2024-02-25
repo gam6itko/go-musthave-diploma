@@ -66,14 +66,14 @@ func postUserRegister(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	userId, err := userRepo.InsertNew(r.Context(), *l.Login, string(hashPass))
+	userID, err := userRepo.InsertNew(r.Context(), *l.Login, string(hashPass))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	//jwt token create
-	tokenString, err := _jwtIssuer.Issue(userId)
+	tokenString, err := _jwtIssuer.Issue(userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -120,7 +120,7 @@ func postUserLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//jwt issue
-	tokenString, err := _jwtIssuer.Issue(u.Id)
+	tokenString, err := _jwtIssuer.Issue(u.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -152,7 +152,7 @@ func postUserOrders(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid Authorization header", http.StatusUnauthorized)
 		return
 	}
-	userId, err := _jwtIssuer.Parse(parts[1])
+	userID, err := _jwtIssuer.Parse(parts[1])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -169,27 +169,27 @@ func postUserOrders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
-	orderId, err := strconv.ParseUint(
+	orderID, err := strconv.ParseUint(
 		strings.Trim(string(bNumber), " \n\t"),
 		10,
 		64,
 	)
 	if err != nil {
-		http.Error(w, "failed to parse orderId", http.StatusBadRequest)
+		http.Error(w, "failed to parse orderID", http.StatusBadRequest)
 		return
 	}
-	if !diploma.LuhnValidate(orderId) {
-		http.Error(w, "orderId validation fail", http.StatusUnprocessableEntity)
+	if !diploma.LuhnValidate(orderID) {
+		http.Error(w, "orderID validation fail", http.StatusUnprocessableEntity)
 		return
 	}
 	repo := diploma.NewOrderRepository(_db)
-	orderEntity, err := repo.FindById(r.Context(), orderId)
+	orderEntity, err := repo.FindById(r.Context(), orderID)
 	if err != nil {
 		http.Error(w, "order check fail", http.StatusInternalServerError)
 		return
 	}
 	if orderEntity != nil {
-		if orderEntity.UserId == userId {
+		if orderEntity.UserID == userID {
 			http.Error(w, "already processed", http.StatusOK)
 		} else {
 			http.Error(w, "already processed by another user", http.StatusConflict)
@@ -198,10 +198,10 @@ func postUserOrders(w http.ResponseWriter, r *http.Request) {
 	}
 
 	order := &diploma.Order{
-		Id:     orderId,
-		UserId: userId,
+		ID:     orderID,
+		UserID: userID,
 	}
-	if acc, err := _accClient.Get(orderId); err != nil {
+	if acc, err := _accClient.Get(orderID); err != nil {
 		log.Printf("failed to get accural info. %s", err)
 	} else {
 		if s, sErr := diploma.OrderStatusFromString(acc.Status); sErr != nil {

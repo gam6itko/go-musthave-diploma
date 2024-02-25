@@ -24,7 +24,7 @@ func (ths UserRepository) FindByLogin(ctx context.Context, login string) (*User,
 			`SELECT "id", "login", "password" FROM "user" WHERE "login" = $1`,
 			login,
 		).
-		Scan(&u.Id, &u.Login, &u.PasswordHash)
+		Scan(&u.ID, &u.Login, &u.PasswordHash)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil

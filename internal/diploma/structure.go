@@ -17,7 +17,7 @@ type Claims struct {
 }
 
 type User struct {
-	Id           uint64
+	ID           uint64
 	Login        string
 	PasswordHash []byte
 }
@@ -63,8 +63,8 @@ const (
 )
 
 type Order struct {
-	Id      uint64
-	UserId  uint64
+	ID      uint64
+	UserID  uint64
 	Status  OrderStatus
 	Accural float64
 }

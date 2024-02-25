@@ -25,9 +25,9 @@ func NewAccuralClient(httpClient *http.Client, host string) *AccuralClient {
 	}
 }
 
-func (ths AccuralClient) Get(orderId uint64) (acc *Accural, err error) {
+func (ths AccuralClient) Get(orderID uint64) (acc *Accural, err error) {
 	resp, err := ths.httpClient.Get(
-		fmt.Sprintf("%s/api/orders/%d", ths.host, orderId),
+		fmt.Sprintf("%s/api/orders/%d", ths.host, orderID),
 	)
 	if err != nil {
 		return

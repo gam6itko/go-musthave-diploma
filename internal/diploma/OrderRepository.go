@@ -24,7 +24,7 @@ func (ths OrderRepository) FindById(ctx context.Context, id uint64) (*Order, err
 			`SELECT "id", "user_id" FROM "order" WHERE "id" = $1`,
 			id,
 		).
-		Scan(&u.Id, &u.UserId)
+		Scan(&u.ID, &u.UserID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
@@ -39,8 +39,8 @@ func (ths OrderRepository) InsertNew(ctx context.Context, order *Order) (err err
 	_, err = ths.db.ExecContext(
 		ctx,
 		`INSERT INTO "order" ("id", "user_id") VALUES ($1, $2)`,
-		order.Id,
-		order.UserId,
+		order.ID,
+		order.UserID,
 	)
 	return
 }
@@ -58,7 +58,7 @@ func (ths OrderRepository) FindByStatus(ctx context.Context, status OrderStatus)
 	for rows.Next() {
 		o := &Order{}
 		var status string
-		err = rows.Scan(&o.Id, &o.UserId, status)
+		err = rows.Scan(&o.ID, &o.UserID, status)
 		if err != nil {
 			return nil, err
 		}
