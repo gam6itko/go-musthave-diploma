@@ -1,16 +1,10 @@
-package internal
+package diploma
 
 import (
 	"context"
 	"database/sql"
 	"errors"
 )
-
-type User struct {
-	Id           int64
-	Login        string
-	PasswordHash []byte
-}
 
 type UserRepository struct {
 	db *sql.DB
@@ -41,7 +35,7 @@ func (ths UserRepository) FindByLogin(ctx context.Context, login string) (*User,
 	return u, nil
 }
 
-func (ths UserRepository) InsertNew(ctx context.Context, login string, hashPass string) (id int64, err error) {
+func (ths UserRepository) InsertNew(ctx context.Context, login string, hashPass string) (id uint64, err error) {
 	err = ths.db.
 		QueryRowContext(
 			ctx,

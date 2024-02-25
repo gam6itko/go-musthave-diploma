@@ -1,4 +1,4 @@
-package internal
+package diploma
 
 import (
 	"errors"
@@ -16,13 +16,16 @@ func NewJWTIssuer(key []byte) *JWTIssuer {
 	}
 }
 
-func (ths JWTIssuer) IssueFor(userId int64) (tokenString string, err error) {
+func (ths JWTIssuer) Issue(userId uint64) (tokenString string, err error) {
 	token := jwt.NewWithClaims(
 		jwt.SigningMethodHS256,
 		Claims{
 			RegisteredClaims: jwt.RegisteredClaims{
 				IssuedAt: &jwt.NumericDate{
 					Time: time.Now().UTC(),
+				},
+				ExpiresAt: &jwt.NumericDate{
+					Time: time.Now().Add(24 * time.Hour).UTC(),
 				},
 			},
 			UserID: userId,
@@ -34,7 +37,7 @@ func (ths JWTIssuer) IssueFor(userId int64) (tokenString string, err error) {
 	return
 }
 
-func (ths JWTIssuer) Parse(tokenString string) (int64, error) {
+func (ths JWTIssuer) Parse(tokenString string) (uint64, error) {
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(
 		tokenString,

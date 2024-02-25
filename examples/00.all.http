@@ -2,7 +2,7 @@
 @password = {{$random.alphabetic(8)}}
 
 ### Registration
-POST localhost:8080/api/user/register
+POST {{host}}/api/user/register
 Content-Type: application/json
 
 {
@@ -22,7 +22,7 @@ Content-Type: application/json
 
 
 ### Login
-POST http://localhost:8080/api/user/login
+POST {{host}}/api/user/login
 Content-Type: application/json
 
 {

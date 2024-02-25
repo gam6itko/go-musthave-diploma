@@ -12,16 +12,21 @@
 #     CONSTRAINT gauge_pk PRIMARY KEY ("key")
 # );
 
-CREATE TABLE IF NOT EXISTS public.order
-(
-    id  int PRIMARY KEY,
-    value double precision NULL,
-    CONSTRAINT gauge_pk PRIMARY KEY ("id")
-);
+
 
 CREATE TABLE IF NOT EXISTS public.user
 (
-    id       SERIAL PRIMARY KEY,
+    id       BIGSERIAL PRIMARY KEY,
     login varchar,
     password varchar
+);
+
+CREATE TABLE IF NOT EXISTS public.order
+(
+    id  int PRIMARY KEY,
+    user_id BIGINT,
+    status smallint,
+    CONSTRAINT fk_user
+        FOREIGN KEY(user_id)
+            REFERENCES "user"(id)
 );

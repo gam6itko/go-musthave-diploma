@@ -1,7 +1,7 @@
 @login = user
 @password = pass
 
-POST http://localhost:8080/api/user/login?{{login}}
+POST {{host}}/api/user/login?{{login}}
 Content-Type: application/json
 
 {

@@ -2,6 +2,8 @@ package main
 
 import (
 	"flag"
+	"github.com/joho/godotenv"
+	"log"
 	"os"
 )
 
@@ -15,6 +17,10 @@ type appConfig struct {
 var _appConfig *appConfig
 
 func init() {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal(err)
+	}
+
 	_appConfig = buildAppConfig()
 }
 
@@ -37,13 +43,13 @@ func fillFromArgs(c *appConfig) {
 	accuralAddr := flag.String("r", "", "accural system address")
 	flag.Parse()
 
-	if listenAdd != nil {
+	if *listenAdd != "" {
 		c.listenAdd = *listenAdd
 	}
-	if dbDsn != nil {
+	if *dbDsn != "" {
 		c.dbDsn = *dbDsn
 	}
-	if accuralAddr != nil {
+	if *accuralAddr != "" {
 		c.listenAdd = *accuralAddr
 	}
 }

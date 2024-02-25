@@ -1,27 +1,43 @@
 package main
 
 import (
+	"context"
 	"database/sql"
-	"github.com/gam6itko/go-musthave-diploma/internal"
+	"github.com/gam6itko/go-musthave-diploma/internal/diploma"
 	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/joho/godotenv"
 	"log"
 	"net/http"
+	"time"
 )
 
 var _db *sql.DB
-var _jwtIssuer *internal.JWTIssuer
+var _jwtIssuer *diploma.JWTIssuer
+var _accClient *diploma.AccuralClient
 
 func init() {
-	if err := godotenv.Load(); err != nil {
+
+	var err error
+	_db, err = sql.Open("pgx", _appConfig.dbDsn)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := _db.Ping(); err != nil {
 		log.Fatal(err)
 	}
 
-	_jwtIssuer = internal.NewJWTIssuer(_appConfig.jwtKey)
+	_jwtIssuer = diploma.NewJWTIssuer(_appConfig.jwtKey)
+
+	httpClient := &http.Client{}
+	_accClient = diploma.NewAccuralClient(
+		httpClient,
+		_appConfig.accrualAddr,
+	)
 }
 
 func main() {
+	//todo startAccuralPolling()
+
 	server := &http.Server{
 		Addr:    _appConfig.listenAdd,
 		Handler: newRouter(),
@@ -53,4 +69,37 @@ func newRouter() chi.Router {
 	r.Get("/api/user/withdrawals", getUserWithdrawals)
 
 	return r
+}
+
+func startAccuralPolling() {
+
+	repo := diploma.NewOrderRepository(_db)
+
+	ticker := time.NewTicker(5 * time.Second)
+	for range ticker.C {
+		orderList, err := repo.FindByStatus(context.TODO(), diploma.StatusProcessing)
+		if err != nil {
+			log.Printf("error: %s", err)
+			continue
+		}
+
+		for _, o := range orderList {
+			acc, err := _accClient.Get(o.Id)
+			if err != nil {
+				log.Printf(err.Error())
+			}
+			accStatus, err := diploma.OrderStatusFromString(acc.Status)
+			if err != nil {
+				log.Printf(err.Error())
+			}
+			if o.Status == accStatus {
+				continue
+			}
+
+			err = repo.UpdateStatus(context.TODO(), o.Id, o.Status, o.Accural)
+			if err != nil {
+				log.Printf(err.Error())
+			}
+		}
+	}
 }

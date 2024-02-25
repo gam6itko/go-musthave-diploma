@@ -3,17 +3,19 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gam6itko/go-musthave-diploma/internal"
+	"github.com/gam6itko/go-musthave-diploma/internal/diploma"
 	"golang.org/x/crypto/bcrypt"
 	"io"
+	"log"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
-func decodeLoginPass(body io.ReadCloser) (l *internal.LoginPass, err error) {
+func decodeLoginPass(body io.ReadCloser) (l *diploma.LoginPass, err error) {
 	defer body.Close()
 
-	l = new(internal.LoginPass)
+	l = new(diploma.LoginPass)
 	decoder := json.NewDecoder(body)
 	err = decoder.Decode(l)
 	return
@@ -29,7 +31,7 @@ func decodeLoginPass(body io.ReadCloser) (l *internal.LoginPass, err error) {
 //	500 — внутренняя ошибка сервера.
 func postUserRegister(w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("Content-Type") != "application/json" {
-		http.Error(w, "invalid Content-Type", http.StatusInternalServerError)
+		http.Error(w, "invalid Content-Type", http.StatusBadRequest)
 		return
 	}
 
@@ -48,7 +50,7 @@ func postUserRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// check user exists
-	userRepo := internal.NewUserRepository(_db)
+	userRepo := diploma.NewUserRepository(_db)
 	u, err := userRepo.FindByLogin(r.Context(), *l.Login)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -71,7 +73,7 @@ func postUserRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//jwt token create
-	tokenString, err := _jwtIssuer.IssueFor(userId)
+	tokenString, err := _jwtIssuer.Issue(userId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -90,7 +92,7 @@ func postUserRegister(w http.ResponseWriter, r *http.Request) {
 // 500 — внутренняя ошибка сервера.
 func postUserLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("Content-Type") != "application/json" {
-		http.Error(w, "invalid Content-Type", http.StatusInternalServerError)
+		http.Error(w, "invalid Content-Type", http.StatusBadRequest)
 		return
 	}
 
@@ -100,7 +102,7 @@ func postUserLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userRepo := internal.NewUserRepository(_db)
+	userRepo := diploma.NewUserRepository(_db)
 	u, err := userRepo.FindByLogin(r.Context(), *l.Login)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -118,7 +120,7 @@ func postUserLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//jwt issue
-	tokenString, err := _jwtIssuer.IssueFor(u.Id)
+	tokenString, err := _jwtIssuer.Issue(u.Id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -139,8 +141,9 @@ func postUserLogin(w http.ResponseWriter, r *http.Request) {
 // 422 — неверный формат номера заказа;
 // 500 — внутренняя ошибка сервера.
 func postUserOrders(w http.ResponseWriter, r *http.Request) {
+	// аутентификация
 	auth := r.Header.Get("Authorization")
-	if auth != "" {
+	if auth == "" {
 		http.Error(w, "Authorization header is empty", http.StatusUnauthorized)
 		return
 	}
@@ -149,13 +152,75 @@ func postUserOrders(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid Authorization header", http.StatusUnauthorized)
 		return
 	}
-
-	_, err := _jwtIssuer.Parse(parts[1])
+	userId, err := _jwtIssuer.Parse(parts[1])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
+	// проверка номера
+	if r.Header.Get("Content-Type") != "text/plain" {
+		http.Error(w, "invalid Content-Type", http.StatusBadRequest)
+		return
+	}
+	bNumber, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "bad body", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+	orderId, err := strconv.ParseUint(
+		strings.Trim(string(bNumber), " \n\t"),
+		10,
+		64,
+	)
+	if err != nil {
+		http.Error(w, "failed to parse orderId", http.StatusBadRequest)
+		return
+	}
+	if !diploma.LuhnValidate(orderId) {
+		http.Error(w, "orderId validation fail", http.StatusUnprocessableEntity)
+		return
+	}
+	repo := diploma.NewOrderRepository(_db)
+	orderEntity, err := repo.FindById(r.Context(), orderId)
+	if err != nil {
+		http.Error(w, "order check fail", http.StatusInternalServerError)
+		return
+	}
+	if orderEntity != nil {
+		if orderEntity.UserId == userId {
+			http.Error(w, "already processed", http.StatusOK)
+		} else {
+			http.Error(w, "already processed by another user", http.StatusConflict)
+		}
+		return
+	}
+
+	order := &diploma.Order{
+		Id:     orderId,
+		UserId: userId,
+	}
+	if acc, err := _accClient.Get(orderId); err != nil {
+		log.Printf("failed to get accural info. %s", err)
+	} else {
+		if s, sErr := diploma.OrderStatusFromString(acc.Status); sErr != nil {
+			log.Printf("failed to get accural status. %s", sErr)
+		} else {
+			order.Status = s
+		}
+	}
+
+	err = repo.InsertNew(
+		r.Context(),
+		order,
+	)
+	if err != nil {
+		http.Error(w, "fail to register order", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusAccepted)
 }
 
 // получение списка загруженных пользователем номеров заказов, статусов их обработки и информации о начислениях;
