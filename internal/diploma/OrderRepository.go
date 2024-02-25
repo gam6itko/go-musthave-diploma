@@ -56,12 +56,40 @@ func (ths OrderRepository) FindByStatus(ctx context.Context, status OrderStatus)
 		return nil, err
 	}
 	defer rows.Close()
+	return ths.rowsToOrders(rows)
+}
 
+func (ths OrderRepository) UpdateStatus(ctx context.Context, orderID uint64, status OrderStatus, accural float64) (err error) {
+	_, err = ths.db.ExecContext(
+		ctx,
+		`UPDATE "order" SET "status" = $1, "accural" = $2 WHERE "id" = $3`,
+		status,
+		accural,
+		orderID,
+	)
+	return
+}
+
+func (ths OrderRepository) GetUserOrders(ctx context.Context, userID uint64) ([]*Order, error) {
+	rows, err := ths.db.
+		QueryContext(
+			ctx,
+			`SELECT "id", "user_id", "status" FROM "order" WHERE "user_id" = $1`,
+			userID,
+		)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return ths.rowsToOrders(rows)
+}
+
+func (ths OrderRepository) rowsToOrders(rows *sql.Rows) ([]*Order, error) {
 	result := make([]*Order, 0)
 	for rows.Next() {
 		o := &Order{}
 		var status string
-		err = rows.Scan(&o.ID, &o.UserID, status)
+		err := rows.Scan(&o.ID, &o.UserID, status)
 		if err != nil {
 			return nil, err
 		}
@@ -80,15 +108,4 @@ func (ths OrderRepository) FindByStatus(ctx context.Context, status OrderStatus)
 	}
 
 	return result, nil
-}
-
-func (ths OrderRepository) UpdateStatus(ctx context.Context, orderID uint64, status OrderStatus, accural float64) (err error) {
-	_, err = ths.db.ExecContext(
-		ctx,
-		`UPDATE "order" SET "status" = $1, "accural" = $2 WHERE "id" = $3`,
-		status,
-		accural,
-		orderID,
-	)
-	return
 }

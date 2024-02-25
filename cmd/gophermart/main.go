@@ -48,12 +48,15 @@ func initDatabaseSchema(db *sql.DB) error {
 (
     id       BIGSERIAL PRIMARY KEY,
     login varchar,
-    password varchar
+    password varchar,
+    balance_current NUMERIC(7,2) DEFAULT 0 NOT NULL,
+    balance_withdraw NUMERIC(7,2) DEFAULT 0 NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS public.order
 (
     id  int PRIMARY KEY,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     user_id BIGINT,
     status smallint,
     CONSTRAINT fk_user

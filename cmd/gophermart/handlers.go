@@ -21,6 +21,27 @@ func decodeLoginPass(body io.ReadCloser) (l *diploma.LoginPass, err error) {
 	return
 }
 
+// аутентификация
+func authenticate(w http.ResponseWriter, r *http.Request) (userID uint64, success bool) {
+	auth := r.Header.Get("Authorization")
+	if auth == "" {
+		http.Error(w, "Authorization header is empty", http.StatusUnauthorized)
+		return
+	}
+	parts := strings.Split(auth, " ")
+	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+		http.Error(w, "invalid Authorization header", http.StatusUnauthorized)
+		return
+	}
+	userID, err := _jwtIssuer.Parse(parts[1])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	return userID, true
+}
+
 // регистрация пользователя;
 //
 // Возможные коды ответа:
@@ -141,20 +162,8 @@ func postUserLogin(w http.ResponseWriter, r *http.Request) {
 // 422 — неверный формат номера заказа;
 // 500 — внутренняя ошибка сервера.
 func postUserOrders(w http.ResponseWriter, r *http.Request) {
-	// аутентификация
-	auth := r.Header.Get("Authorization")
-	if auth == "" {
-		http.Error(w, "Authorization header is empty", http.StatusUnauthorized)
-		return
-	}
-	parts := strings.Split(auth, " ")
-	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-		http.Error(w, "invalid Authorization header", http.StatusUnauthorized)
-		return
-	}
-	userID, err := _jwtIssuer.Parse(parts[1])
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+	userID, success := authenticate(w, r)
+	if !success {
 		return
 	}
 
@@ -225,20 +234,93 @@ func postUserOrders(w http.ResponseWriter, r *http.Request) {
 
 // получение списка загруженных пользователем номеров заказов, статусов их обработки и информации о начислениях;
 func getUserOrders(w http.ResponseWriter, r *http.Request) {
+	userID, success := authenticate(w, r)
+	if !success {
+		return
+	}
+	repo := diploma.NewOrderRepository(_db)
+	orderList, err := repo.GetUserOrders(r.Context(), userID)
+	if err != nil {
+		http.Error(w, "fail to get orders", http.StatusInternalServerError)
+		return
+	}
+	if len(orderList) == 0 {
+		http.Error(w, "no orders", http.StatusNoContent)
+		return
+	}
 
+	encoder := json.NewEncoder(w)
+	if err := encoder.Encode(orderList); err != nil {
+		log.Println(err.Error())
+	}
 }
 
 // получение текущего баланса счёта баллов лояльности пользователя;
 func getUserBalance(w http.ResponseWriter, r *http.Request) {
+	userID, success := authenticate(w, r)
+	if !success {
+		return
+	}
+	repo := diploma.NewUserRepository(_db)
+	u, err := repo.FindByID(r.Context(), userID)
+	if err != nil {
+		http.Error(w, "fail to retrieve user data", http.StatusInternalServerError)
+		return
+	}
 
+	encoder := json.NewEncoder(w)
+	err = encoder.Encode(&diploma.UserBalanceResponse{
+		Current:  u.BalanceCurrent,
+		Withdraw: u.BalanceWithdraw,
+	})
+	if err != nil {
+		log.Printf("encode error: %s", err)
+	}
 }
 
 // запрос на списание баллов с накопительного счёта в счёт оплаты нового заказа;
 func postUserBalanceWithdraw(w http.ResponseWriter, r *http.Request) {
+	userID, success := authenticate(w, r)
+	if !success {
+		return
+	}
 
+	reqData := new(diploma.WithdrawRequest)
+	e := json.NewEncoder(w)
+	if err := e.Encode(reqData); err != nil {
+		http.Error(w, "fail to decode request body", http.StatusBadRequest)
+		return
+	}
+
+	orderID, err := strconv.ParseUint(reqData.Order, 10, 64)
+	if err != nil || !diploma.LuhnValidate(orderID) {
+		http.Error(w, "orderID validation fail", http.StatusUnprocessableEntity)
+		return
+	}
+
+	repo := diploma.NewUserRepository(_db)
+	u, err := repo.FindByID(r.Context(), userID)
+	if err != nil {
+		http.Error(w, "fail to retrieve user data", http.StatusInternalServerError)
+		return
+	}
+	if u.BalanceCurrent < reqData.Sum {
+		http.Error(w, "not enough balance", http.StatusPaymentRequired)
+		return
+	}
+
+	if err := repo.Withdraw(r.Context(), userID, orderID, reqData.Sum); err != nil {
+		http.Error(w, "fail to withdraw", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 // получение информации о выводе средств с накопительного счёта пользователем.
 func getUserWithdrawals(w http.ResponseWriter, r *http.Request) {
-
+	userID, success := authenticate(w, r)
+	if !success {
+		return
+	}
 }

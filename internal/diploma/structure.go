@@ -17,9 +17,21 @@ type Claims struct {
 }
 
 type User struct {
-	ID           uint64
-	Login        string
-	PasswordHash []byte
+	ID              uint64
+	Login           string
+	PasswordHash    []byte
+	BalanceCurrent  float32
+	BalanceWithdraw float32
+}
+
+type UserBalanceResponse struct {
+	Current  float32 `json:"current"`
+	Withdraw float32 `json:"withdraw"`
+}
+
+type WithdrawRequest struct {
+	Order string  `json:"order"`
+	Sum   float32 `json:"sum"`
 }
 
 type OrderStatus byte
@@ -47,7 +59,7 @@ func OrderStatusFromString(str string) (s OrderStatus, err error) {
 
 const (
 	// Статуса нет Accural. Это для внутреннего пользования.
-	StatusUndefined OrderStatus = iota
+	StatusNew OrderStatus = iota
 
 	// заказ зарегистрирован, но вознаграждение не рассчитано;
 	StatusRegistered

@@ -1,0 +1,5 @@
+@jwt = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MDg5NDU2MzEsImlhdCI6MTcwODg1OTIzMSwiVXNlcklEIjoyOH0.i3uh1OiTh3-7R8FFEW3nUKoCTIdigDGHzMuf13FUjEo
+
+GET {{host}}/api/user/orders
+Content-Type: text/plain
+Authorization: Bearer {{jwt}}
