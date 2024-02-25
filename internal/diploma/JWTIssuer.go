@@ -16,7 +16,7 @@ func NewJWTIssuer(key []byte) *JWTIssuer {
 	}
 }
 
-func (ths JWTIssuer) Issue(userId uint64) (tokenString string, err error) {
+func (ths JWTIssuer) Issue(userID uint64) (tokenString string, err error) {
 	token := jwt.NewWithClaims(
 		jwt.SigningMethodHS256,
 		Claims{
@@ -28,7 +28,7 @@ func (ths JWTIssuer) Issue(userId uint64) (tokenString string, err error) {
 					Time: time.Now().Add(24 * time.Hour).UTC(),
 				},
 			},
-			UserID: userId,
+			UserID: userID,
 		},
 	)
 

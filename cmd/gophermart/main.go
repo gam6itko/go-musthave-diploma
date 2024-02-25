@@ -75,7 +75,7 @@ func main() {
 	log.Printf("Starting server on %s", _appConfig.listenAdd)
 	if err := server.ListenAndServe(); err != nil {
 		// записываем в лог ошибку, если сервер не запустился
-		log.Printf(err.Error())
+		log.Printf("http server error. %s", err)
 	}
 }
 

@@ -16,13 +16,13 @@ func NewOrderRepository(db *sql.DB) *OrderRepository {
 	}
 }
 
-func (ths OrderRepository) FindById(ctx context.Context, id uint64) (*Order, error) {
+func (ths OrderRepository) FindById(ctx context.Context, orderID uint64) (*Order, error) {
 	u := new(Order)
 	err := ths.db.
 		QueryRowContext(
 			ctx,
 			`SELECT "id", "user_id" FROM "order" WHERE "id" = $1`,
-			id,
+			orderID,
 		).
 		Scan(&u.ID, &u.UserID)
 	if err != nil {
@@ -52,6 +52,9 @@ func (ths OrderRepository) FindByStatus(ctx context.Context, status OrderStatus)
 			`SELECT "id", "user_id", "status" FROM "order" WHERE "status" = $1`,
 			status,
 		)
+	if err != nil {
+		return nil, err
+	}
 	defer rows.Close()
 
 	result := make([]*Order, 0)
