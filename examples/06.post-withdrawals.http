@@ -1,4 +1,4 @@
-GET {{host}}/api/user/orders
+POST {{host}}/api/user/withdrawals
 Content-Type: text/plain
 Authorization: Bearer {{jwt}}
 Accept-Encoding: none

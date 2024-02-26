@@ -40,6 +40,9 @@ func OrderStatusFromString(str string) (s OrderStatus, err error) {
 
 func OrderStatusToString(s OrderStatus) (str string, err error) {
 	switch s {
+	case StatusNew:
+		str = "NEW"
+		return
 	case StatusRegistered:
 		str = "REGISTERED"
 		return
@@ -59,7 +62,7 @@ func OrderStatusToString(s OrderStatus) (str string, err error) {
 }
 
 const (
-	// Статуса нет Accural. Это для внутреннего пользования.
+	// Статуса нет Accrual. Это для внутреннего пользования.
 	StatusNew OrderStatus = iota
 
 	// заказ зарегистрирован, но вознаграждение не рассчитано;
@@ -80,7 +83,7 @@ type Order struct {
 	UserID     uint64
 	UploadedAt time.Time
 	Status     OrderStatus
-	Accural    float32
+	Accrual    float32
 }
 
 type Withdrawal struct {

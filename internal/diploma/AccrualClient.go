@@ -8,24 +8,24 @@ import (
 	"strings"
 )
 
-type AccuralClient struct {
+type AccrualClient struct {
 	httpClient *http.Client
 	host       string
 }
 
-func NewAccuralClient(httpClient *http.Client, host string) *AccuralClient {
+func NewAccrualClient(httpClient *http.Client, host string) *AccrualClient {
 	host = strings.TrimRight(host, "/")
 	if !strings.Contains(host, "://") {
 		host = fmt.Sprintf("http://%s", host)
 	}
 
-	return &AccuralClient{
+	return &AccrualClient{
 		httpClient,
 		host,
 	}
 }
 
-func (ths AccuralClient) Get(orderID uint64) (acc *Accural, err error) {
+func (ths AccrualClient) Get(orderID uint64) (acc *Accrual, err error) {
 	resp, err := ths.httpClient.Get(
 		fmt.Sprintf("%s/api/orders/%d", ths.host, orderID),
 	)
@@ -52,7 +52,7 @@ func (ths AccuralClient) Get(orderID uint64) (acc *Accural, err error) {
 
 	decoder := json.NewDecoder(resp.Body)
 	defer resp.Body.Close()
-	acc = new(Accural)
+	acc = new(Accrual)
 	err = decoder.Decode(acc)
 	if err != nil {
 		return

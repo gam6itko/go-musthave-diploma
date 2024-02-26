@@ -164,7 +164,7 @@ func postUserLogin(w http.ResponseWriter, r *http.Request, db *sql.DB, jwtIssuer
 // 409 — номер заказа уже был загружен другим пользователем;
 // 422 — неверный формат номера заказа;
 // 500 — внутренняя ошибка сервера.
-func postUserOrders(w http.ResponseWriter, r *http.Request, db *sql.DB, accClient *diploma.AccuralClient) {
+func postUserOrders(w http.ResponseWriter, r *http.Request, db *sql.DB, accClient *diploma.AccrualClient) {
 	userID, success := authenticate(w, r)
 	if !success {
 		return
@@ -214,14 +214,14 @@ func postUserOrders(w http.ResponseWriter, r *http.Request, db *sql.DB, accClien
 		UserID: userID,
 	}
 	if acc, err := accClient.Get(orderID); err != nil {
-		log.Printf("failed to get accural info. %s", err)
+		log.Printf("failed to get accrual info. for: %d. %s", orderID, err)
 	} else {
 		if s, sErr := diploma.OrderStatusFromString(acc.Status); sErr != nil {
-			log.Printf("failed to get accural status. %s", sErr)
+			log.Printf("failed to get accrual status. %s", sErr)
 		} else {
 			order.Status = s
-			order.Accural = acc.Accrual
-			log.Printf("accural: %s, %s, %f", acc.OrderNumber, acc.Status, acc.Accrual)
+			order.Accrual = acc.Accrual
+			log.Printf("accrual: %s, %s, %f", acc.OrderNumber, acc.Status, acc.Accrual)
 		}
 	}
 
@@ -258,14 +258,14 @@ func getUserOrders(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	for i, o := range orderList {
 		statusStr, err := diploma.OrderStatusToString(o.Status)
 		if err != nil {
-			http.Error(w, "no orders", http.StatusNoContent)
+			http.Error(w, "no orders", http.StatusInternalServerError)
 			return
 		}
 		responseData[i] = &diploma.OrderResponse{
 			Number:     strconv.FormatUint(o.ID, 10),
 			UploadedAt: o.UploadedAt.Format(time.RFC3339),
 			Status:     statusStr,
-			Accural:    o.Accural,
+			Accrual:    o.Accrual,
 		}
 	}
 
@@ -291,10 +291,12 @@ func getUserBalance(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	w.Header().Set("Content-Type", "application/json")
 	encoder := json.NewEncoder(w)
-	err = encoder.Encode(&diploma.UserBalanceResponse{
-		Current:  u.BalanceCurrent,
-		Withdraw: u.BalanceWithdraw,
-	})
+	err = encoder.Encode(
+		&diploma.UserBalanceResponse{
+			Current:   u.BalanceCurrent,
+			Withdrawn: u.BalanceWithdraw,
+		},
+	)
 	if err != nil {
 		log.Printf("encode error: %s", err)
 	}
@@ -353,13 +355,15 @@ func getUserWithdrawals(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 
 	responseData := make([]*diploma.WithdrawalResponse, len(wList))
-	for i, w := range wList {
+	for i, wt := range wList {
 		responseData[i] = &diploma.WithdrawalResponse{
-			Order:       strconv.FormatUint(w.OrderID, 10),
-			ProcessedAt: w.ProcessedAt.Format(time.RFC3339),
-			Sum:         w.Sum,
+			Order:       strconv.FormatUint(wt.OrderID, 10),
+			ProcessedAt: wt.ProcessedAt.Format(time.RFC3339),
+			Sum:         wt.Sum,
 		}
 	}
+
+	w.Header().Set("Content-Type", "application/json")
 	encoder := json.NewEncoder(w)
 	if err = encoder.Encode(responseData); err != nil {
 		log.Printf("encode error: %s", err)

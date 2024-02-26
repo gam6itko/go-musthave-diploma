@@ -41,7 +41,7 @@ func (ths UserRepository) FindByID(ctx context.Context, userID uint64) (*diploma
 	err := ths.db.
 		QueryRowContext(
 			ctx,
-			`SELECT "id", "login", "password", "balance_current", "balance_withdraw" FROM "user" WHERE "login" = $1`,
+			`SELECT "id", "login", "password", "balance_current", "balance_withdraw" FROM "user" WHERE "id" = $1`,
 			userID,
 		).
 		Scan(&u.ID, &u.Login, &u.PasswordHash, &u.BalanceCurrent, &u.BalanceWithdraw)
@@ -76,6 +76,16 @@ func (ths UserRepository) Withdraw(ctx context.Context, userID uint64, orderID u
 	defer tx.Rollback()
 
 	_, err = tx.Exec(
+		`INSERT INTO "withdrawal" ("user_id", "order_id", "sum") VALUES ($1, $2, $3)`,
+		userID,
+		orderID,
+		sum,
+	)
+	if err != nil {
+		return
+	}
+
+	_, err = tx.Exec(
 		`UPDATE "user" SET 
 	"balance_current" = "balance_current" - $1, 
 	"balance_withdraw" = "balance_withdraw" + $1 
@@ -87,17 +97,7 @@ WHERE "id" = $2`,
 		return
 	}
 
-	_, err = tx.Exec(
-		`INSERT INTO "withdrawal" ("user_id", "order_id", "sum") VALUES ($1, $2, $3)`,
-		userID,
-		orderID,
-		sum,
-	)
-	if err != nil {
-		return
-	}
-	err = tx.Commit()
-	if err != nil {
+	if err = tx.Commit(); err != nil {
 		return
 	}
 

@@ -15,8 +15,8 @@ type Claims struct {
 }
 
 type UserBalanceResponse struct {
-	Current  float32 `json:"current"`
-	Withdraw float32 `json:"withdraw"`
+	Current   float32 `json:"current"`
+	Withdrawn float32 `json:"withdrawn"`
 }
 
 type WithdrawRequest struct {
@@ -24,7 +24,7 @@ type WithdrawRequest struct {
 	Sum   float32 `json:"sum"`
 }
 
-type Accural struct {
+type Accrual struct {
 	OrderNumber string  `json:"order"`
 	Status      string  `json:"status"`
 	Accrual     float32 `json:"accrual"`
@@ -40,5 +40,5 @@ type OrderResponse struct {
 	Number     string  `json:"number"`
 	Status     string  `json:"status"`
 	UploadedAt string  `json:"uploaded_at"`
-	Accural    float32 `json:"accural"`
+	Accrual    float32 `json:"accrual"`
 }

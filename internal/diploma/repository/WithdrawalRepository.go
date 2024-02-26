@@ -34,7 +34,7 @@ func (ths WithdrawalRepository) rowsToOrders(rows *sql.Rows) ([]*diploma.Withdra
 	result := make([]*diploma.Withdrawal, 0)
 	for rows.Next() {
 		w := &diploma.Withdrawal{}
-		err := rows.Scan(&w.ID, &w.UserID, &w.OrderID, w.ProcessedAt, &w.Sum)
+		err := rows.Scan(&w.ID, &w.UserID, &w.OrderID, &w.ProcessedAt, &w.Sum)
 		if err != nil {
 			return nil, err
 		}
