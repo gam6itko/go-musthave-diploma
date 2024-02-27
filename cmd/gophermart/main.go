@@ -88,35 +88,3 @@ func newRouter() chi.Router {
 
 	return r
 }
-
-//func startAccuralPolling() {
-//	repo := diploma.NewOrderRepository(_db)
-//
-//	ticker := time.NewTicker(5 * time.Second)
-//	for range ticker.C {
-//		orderList, err := repo.FindByStatus(context.TODO(), diploma.StatusProcessing)
-//		if err != nil {
-//			log.Printf("error: %s", err)
-//			continue
-//		}
-//
-//		for _, o := range orderList {
-//			acc, err := _accClient.Get(o.ID)
-//			if err != nil {
-//				log.Printf(err.Error())
-//			}
-//			accStatus, err := diploma.OrderStatusFromString(acc.Status)
-//			if err != nil {
-//				log.Printf("error. %s", err)
-//			}
-//			if o.Status == accStatus {
-//				continue
-//			}
-//
-//			err = repo.UpdateStatus(context.TODO(), o.ID, o.Status, o.Accrual)
-//			if err != nil {
-//				log.Printf("update status error. %s", err)
-//			}
-//		}
-//	}
-//}

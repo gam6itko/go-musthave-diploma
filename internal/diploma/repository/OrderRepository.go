@@ -71,20 +71,6 @@ func (ths OrderRepository) InsertNew(ctx context.Context, order *diploma.Order) 
 	return
 }
 
-//func (ths OrderRepository) FindByStatus(ctx context.Context, status diploma.OrderStatus) ([]*diploma.Order, error) {
-//	rows, err := ths.db.
-//		QueryContext(
-//			ctx,
-//			`SELECT "id", "user_id", "status" FROM "order" WHERE "status" = $1`,
-//			status,
-//		)
-//	if err != nil {
-//		return nil, err
-//	}
-//	defer rows.Close()
-//	return ths.rowsToOrders(rows)
-//}
-
 func (ths OrderRepository) UpdateStatus(ctx context.Context, orderID uint64, status diploma.OrderStatus, accrual float64) (err error) {
 	_, err = ths.db.ExecContext(
 		ctx,
