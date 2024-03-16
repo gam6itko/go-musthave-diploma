@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/gam6itko/go-musthave-diploma/internal/diploma"
@@ -53,7 +52,7 @@ func authenticate(w http.ResponseWriter, r *http.Request) (userID uint64, succes
 //	400 — неверный формат запроса;
 //	409 — логин уже занят;
 //	500 — внутренняя ошибка сервера.
-func postUserRegister(w http.ResponseWriter, r *http.Request, db *sql.DB, jwtIssuer *diploma.JWTIssuer) {
+func postUserRegister(w http.ResponseWriter, r *http.Request, userRepo *repository.UserRepository, jwtIssuer *diploma.JWTIssuer) {
 	if r.Header.Get("Content-Type") != "application/json" {
 		http.Error(w, "invalid Content-Type", http.StatusBadRequest)
 		return
@@ -74,7 +73,6 @@ func postUserRegister(w http.ResponseWriter, r *http.Request, db *sql.DB, jwtIss
 	}
 
 	// check user exists
-	userRepo := repository.NewUserRepository(db)
 	u, err := userRepo.FindByLogin(r.Context(), *l.Login)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -114,7 +112,7 @@ func postUserRegister(w http.ResponseWriter, r *http.Request, db *sql.DB, jwtIss
 // 400 — неверный формат запроса;
 // 401 — неверная пара логин/пароль;
 // 500 — внутренняя ошибка сервера.
-func postUserLogin(w http.ResponseWriter, r *http.Request, db *sql.DB, jwtIssuer *diploma.JWTIssuer) {
+func postUserLogin(w http.ResponseWriter, r *http.Request, userRepo *repository.UserRepository, jwtIssuer *diploma.JWTIssuer) {
 	if r.Header.Get("Content-Type") != "application/json" {
 		http.Error(w, "invalid Content-Type", http.StatusBadRequest)
 		return
@@ -126,7 +124,6 @@ func postUserLogin(w http.ResponseWriter, r *http.Request, db *sql.DB, jwtIssuer
 		return
 	}
 
-	userRepo := repository.NewUserRepository(db)
 	u, err := userRepo.FindByLogin(r.Context(), *l.Login)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -164,7 +161,7 @@ func postUserLogin(w http.ResponseWriter, r *http.Request, db *sql.DB, jwtIssuer
 // 409 — номер заказа уже был загружен другим пользователем;
 // 422 — неверный формат номера заказа;
 // 500 — внутренняя ошибка сервера.
-func postUserOrders(w http.ResponseWriter, r *http.Request, db *sql.DB, accClient *diploma.AccrualClient) {
+func postUserOrders(w http.ResponseWriter, r *http.Request, repo *repository.OrderRepository, accClient *diploma.AccrualClient) {
 	userID, success := authenticate(w, r)
 	if !success {
 		return
@@ -194,7 +191,6 @@ func postUserOrders(w http.ResponseWriter, r *http.Request, db *sql.DB, accClien
 		http.Error(w, "orderID validation fail", http.StatusUnprocessableEntity)
 		return
 	}
-	repo := repository.NewOrderRepository(db)
 	orderEntity, err := repo.FindByID(r.Context(), orderID)
 	if err != nil {
 		http.Error(w, "order check fail", http.StatusInternalServerError)
@@ -238,12 +234,11 @@ func postUserOrders(w http.ResponseWriter, r *http.Request, db *sql.DB, accClien
 }
 
 // получение списка загруженных пользователем номеров заказов, статусов их обработки и информации о начислениях;
-func getUserOrders(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func getUserOrders(w http.ResponseWriter, r *http.Request, repo *repository.OrderRepository) {
 	userID, success := authenticate(w, r)
 	if !success {
 		return
 	}
-	repo := repository.NewOrderRepository(db)
 	orderList, err := repo.FindByUserID(r.Context(), userID)
 	if err != nil {
 		http.Error(w, "fail to get orders", http.StatusInternalServerError)
@@ -277,12 +272,11 @@ func getUserOrders(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 }
 
 // получение текущего баланса счёта баллов лояльности пользователя;
-func getUserBalance(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func getUserBalance(w http.ResponseWriter, r *http.Request, repo *repository.UserRepository) {
 	userID, success := authenticate(w, r)
 	if !success {
 		return
 	}
-	repo := repository.NewUserRepository(db)
 	u, err := repo.FindByID(r.Context(), userID)
 	if err != nil {
 		http.Error(w, "fail to retrieve user data", http.StatusInternalServerError)
@@ -302,8 +296,8 @@ func getUserBalance(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 }
 
-// запрос на списание баллов с накопительного счёта в счёт оплаты нового заказа;
-func postUserBalanceWithdraw(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+// Запрос на списание баллов с накопительного счёта в счёт оплаты нового заказа;
+func postUserBalanceWithdraw(w http.ResponseWriter, r *http.Request, repo *repository.UserRepository) {
 	userID, success := authenticate(w, r)
 	if !success {
 		return
@@ -323,7 +317,6 @@ func postUserBalanceWithdraw(w http.ResponseWriter, r *http.Request, db *sql.DB)
 		return
 	}
 
-	repo := repository.NewUserRepository(db)
 	u, err := repo.FindByID(r.Context(), userID)
 	if err != nil {
 		http.Error(w, "fail to retrieve user data", http.StatusInternalServerError)
@@ -341,13 +334,12 @@ func postUserBalanceWithdraw(w http.ResponseWriter, r *http.Request, db *sql.DB)
 }
 
 // получение информации о выводе средств с накопительного счёта пользователем.
-func getUserWithdrawals(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func getUserWithdrawals(w http.ResponseWriter, r *http.Request, repo *repository.WithdrawalRepository) {
 	userID, success := authenticate(w, r)
 	if !success {
 		return
 	}
 
-	repo := repository.NewWithdrawalRepository(db)
 	wList, err := repo.FindByUserID(r.Context(), userID)
 	if err != nil {
 		http.Error(w, "fail to get withdrawal list", http.StatusInternalServerError)

@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"github.com/gam6itko/go-musthave-diploma/internal/diploma"
+	"github.com/gam6itko/go-musthave-diploma/internal/diploma/repository"
 	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"log"
@@ -65,25 +66,25 @@ func newRouter() chi.Router {
 
 	// ниже попытка поиграться в DI и тестирование
 	r.Post("/api/user/register", func(w http.ResponseWriter, r *http.Request) {
-		postUserRegister(w, r, _db, _jwtIssuer)
+		postUserRegister(w, r, repository.NewUserRepository(_db), _jwtIssuer)
 	})
 	r.Post("/api/user/login", func(w http.ResponseWriter, r *http.Request) {
-		postUserLogin(w, r, _db, _jwtIssuer)
+		postUserLogin(w, r, repository.NewUserRepository(_db), _jwtIssuer)
 	})
 	r.Post("/api/user/orders", func(w http.ResponseWriter, r *http.Request) {
-		postUserOrders(w, r, _db, _accClient)
+		postUserOrders(w, r, repository.NewOrderRepository(_db), _accClient)
 	})
 	r.Get("/api/user/orders", func(w http.ResponseWriter, r *http.Request) {
-		getUserOrders(w, r, _db)
+		getUserOrders(w, r, repository.NewOrderRepository(_db))
 	})
 	r.Get("/api/user/balance", func(w http.ResponseWriter, r *http.Request) {
-		getUserBalance(w, r, _db)
+		getUserBalance(w, r, repository.NewUserRepository(_db))
 	})
 	r.Post("/api/user/balance/withdraw", func(w http.ResponseWriter, r *http.Request) {
-		postUserBalanceWithdraw(w, r, _db)
+		postUserBalanceWithdraw(w, r, repository.NewUserRepository(_db))
 	})
 	r.Get("/api/user/withdrawals", func(w http.ResponseWriter, r *http.Request) {
-		getUserWithdrawals(w, r, _db)
+		getUserWithdrawals(w, r, repository.NewWithdrawalRepository(_db))
 	})
 
 	return r
