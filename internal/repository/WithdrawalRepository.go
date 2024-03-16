@@ -6,6 +6,10 @@ import (
 	"github.com/gam6itko/go-musthave-diploma/internal/diploma"
 )
 
+type IWithdrawalRepository interface {
+	FindByUserID(ctx context.Context, userID uint64) ([]*diploma.Withdrawal, error)
+}
+
 type WithdrawalRepository struct {
 	db *sql.DB
 }

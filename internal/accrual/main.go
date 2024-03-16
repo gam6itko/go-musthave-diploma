@@ -9,6 +9,10 @@ import (
 	"strings"
 )
 
+type IClient interface {
+	Get(orderID uint64) (acc *diploma.Accrual, err error)
+}
+
 type Client struct {
 	httpClient *http.Client
 	host       string

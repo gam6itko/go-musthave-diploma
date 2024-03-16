@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gam6itko/go-musthave-diploma/internal/diploma"
+	"github.com/gam6itko/go-musthave-diploma/internal/jwt"
 	"github.com/gam6itko/go-musthave-diploma/internal/repository"
 	"golang.org/x/crypto/bcrypt"
 	"io"
@@ -11,8 +12,8 @@ import (
 )
 
 type AnonController struct {
-	jwtIssuer *diploma.JWTIssuer
-	userRepo  *repository.UserRepository
+	jwtIssuer jwt.IIssuer
+	userRepo  repository.IUserRepository
 }
 
 func (ths AnonController) decodeLoginPass(body io.ReadCloser) (l *diploma.LoginPass, err error) {
@@ -24,7 +25,7 @@ func (ths AnonController) decodeLoginPass(body io.ReadCloser) (l *diploma.LoginP
 	return
 }
 
-func NewAnonController(jwtIssuer *diploma.JWTIssuer, userRepo *repository.UserRepository) *AnonController {
+func NewAnonController(jwtIssuer jwt.IIssuer, userRepo repository.IUserRepository) *AnonController {
 	return &AnonController{
 		jwtIssuer,
 		userRepo,
@@ -89,7 +90,7 @@ func (ths AnonController) PostUserRegister(w http.ResponseWriter, r *http.Reques
 	}
 
 	w.Header().Set("Authorization", fmt.Sprintf("Bearer %s", tokenString))
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusOK)
 }
 
 // аутентификация пользователя;

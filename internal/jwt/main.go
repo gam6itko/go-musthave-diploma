@@ -1,4 +1,4 @@
-package diploma
+package jwt
 
 import (
 	"errors"
@@ -6,17 +6,35 @@ import (
 	"time"
 )
 
-type JWTIssuer struct {
+type Claims struct {
+	jwt.RegisteredClaims
+	UserID uint64
+}
+
+type IIssuer interface {
+	Issue(userID uint64) (tokenString string, err error)
+}
+
+type IParser interface {
+	Parse(tokenString string) (uint64, error)
+}
+
+type IIssuerParser interface {
+	IIssuer
+	IParser
+}
+
+type Issuer struct {
 	key []byte
 }
 
-func NewJWTIssuer(key []byte) *JWTIssuer {
-	return &JWTIssuer{
+func NewIssuer(key []byte) *Issuer {
+	return &Issuer{
 		key,
 	}
 }
 
-func (ths JWTIssuer) Issue(userID uint64) (tokenString string, err error) {
+func (ths Issuer) Issue(userID uint64) (tokenString string, err error) {
 	token := jwt.NewWithClaims(
 		jwt.SigningMethodHS256,
 		Claims{
@@ -37,7 +55,7 @@ func (ths JWTIssuer) Issue(userID uint64) (tokenString string, err error) {
 	return
 }
 
-func (ths JWTIssuer) Parse(tokenString string) (uint64, error) {
+func (ths Issuer) Parse(tokenString string) (uint64, error) {
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(
 		tokenString,

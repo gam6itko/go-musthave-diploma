@@ -7,6 +7,13 @@ import (
 	"github.com/gam6itko/go-musthave-diploma/internal/diploma"
 )
 
+type IUserRepository interface {
+	FindByLogin(ctx context.Context, login string) (*diploma.User, error)
+	FindByID(ctx context.Context, userID uint64) (*diploma.User, error)
+	InsertNew(ctx context.Context, login string, hashPass string) (id uint64, err error)
+	Withdraw(ctx context.Context, userID uint64, orderID uint64, sum float32) (err error)
+}
+
 type UserRepository struct {
 	db *sql.DB
 }

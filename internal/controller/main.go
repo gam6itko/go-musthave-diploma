@@ -1,13 +1,13 @@
 package controller
 
 import (
-	"github.com/gam6itko/go-musthave-diploma/internal/diploma"
+	"github.com/gam6itko/go-musthave-diploma/internal/jwt"
 	"net/http"
 	"strings"
 )
 
 type authTrait struct {
-	jwtIssuer *diploma.JWTIssuer
+	jwtIssuer jwt.IIssuerParser
 }
 
 // аутентификация

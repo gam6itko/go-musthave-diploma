@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"github.com/gam6itko/go-musthave-diploma/internal/accrual"
 	"github.com/gam6itko/go-musthave-diploma/internal/controller"
-	"github.com/gam6itko/go-musthave-diploma/internal/diploma"
+	"github.com/gam6itko/go-musthave-diploma/internal/jwt"
 	repository2 "github.com/gam6itko/go-musthave-diploma/internal/repository"
 	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -13,7 +13,7 @@ import (
 )
 
 var _db *sql.DB
-var _jwtIssuer *diploma.JWTIssuer
+var _jwtIssuer *jwt.Issuer
 var _accClient *accrual.Client
 
 func init() {
@@ -27,7 +27,7 @@ func init() {
 		log.Fatal(err)
 	}
 
-	_jwtIssuer = diploma.NewJWTIssuer(_appConfig.jwtKey)
+	_jwtIssuer = jwt.NewIssuer(_appConfig.jwtKey)
 
 	httpClient := &http.Client{}
 	_accClient = accrual.NewAccrualClient(
