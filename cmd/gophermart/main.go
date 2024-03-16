@@ -2,8 +2,10 @@ package main
 
 import (
 	"database/sql"
+	"github.com/gam6itko/go-musthave-diploma/internal/accrual"
+	"github.com/gam6itko/go-musthave-diploma/internal/controller"
 	"github.com/gam6itko/go-musthave-diploma/internal/diploma"
-	"github.com/gam6itko/go-musthave-diploma/internal/diploma/repository"
+	repository2 "github.com/gam6itko/go-musthave-diploma/internal/repository"
 	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"log"
@@ -12,7 +14,7 @@ import (
 
 var _db *sql.DB
 var _jwtIssuer *diploma.JWTIssuer
-var _accClient *diploma.AccrualClient
+var _accClient *accrual.Client
 
 func init() {
 
@@ -28,7 +30,7 @@ func init() {
 	_jwtIssuer = diploma.NewJWTIssuer(_appConfig.jwtKey)
 
 	httpClient := &http.Client{}
-	_accClient = diploma.NewAccrualClient(
+	_accClient = accrual.NewAccrualClient(
 		httpClient,
 		_appConfig.accrualAddr,
 	)
@@ -64,28 +66,22 @@ func newRouter() chi.Router {
 
 	r.Use(compressMiddleware)
 
+	userRepo := repository2.NewUserRepository(_db)
+	orderRepo := repository2.NewOrderRepository(_db)
+	wRepoRepo := repository2.NewWithdrawalRepository(_db)
+	// controllers
+	anonController := controller.NewAnonController(_jwtIssuer, userRepo)
+	userController := controller.NewUserController(userRepo)
+	orderController := controller.NewOrderController(_accClient, orderRepo)
+	wController := controller.NewWithdrawalController(wRepoRepo, userRepo)
 	// ниже попытка поиграться в DI и тестирование
-	r.Post("/api/user/register", func(w http.ResponseWriter, r *http.Request) {
-		postUserRegister(w, r, repository.NewUserRepository(_db), _jwtIssuer)
-	})
-	r.Post("/api/user/login", func(w http.ResponseWriter, r *http.Request) {
-		postUserLogin(w, r, repository.NewUserRepository(_db), _jwtIssuer)
-	})
-	r.Post("/api/user/orders", func(w http.ResponseWriter, r *http.Request) {
-		postUserOrders(w, r, repository.NewOrderRepository(_db), _accClient)
-	})
-	r.Get("/api/user/orders", func(w http.ResponseWriter, r *http.Request) {
-		getUserOrders(w, r, repository.NewOrderRepository(_db))
-	})
-	r.Get("/api/user/balance", func(w http.ResponseWriter, r *http.Request) {
-		getUserBalance(w, r, repository.NewUserRepository(_db))
-	})
-	r.Post("/api/user/balance/withdraw", func(w http.ResponseWriter, r *http.Request) {
-		postUserBalanceWithdraw(w, r, repository.NewUserRepository(_db))
-	})
-	r.Get("/api/user/withdrawals", func(w http.ResponseWriter, r *http.Request) {
-		getUserWithdrawals(w, r, repository.NewWithdrawalRepository(_db))
-	})
+	r.Post("/api/user/register", anonController.PostUserRegister)
+	r.Post("/api/user/login", anonController.PostUserLogin)
+	r.Post("/api/user/orders", orderController.PostUserOrders)
+	r.Get("/api/user/orders", orderController.GetUserOrders)
+	r.Get("/api/user/balance", userController.GetUserBalance)
+	r.Post("/api/user/balance/withdraw", wController.PostUserBalanceWithdraw)
+	r.Get("/api/user/withdrawals", wController.GetUserWithdrawals)
 
 	return r
 }
