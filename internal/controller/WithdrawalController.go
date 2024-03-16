@@ -3,6 +3,7 @@ package controller
 import (
 	"encoding/json"
 	"github.com/gam6itko/go-musthave-diploma/internal/diploma"
+	"github.com/gam6itko/go-musthave-diploma/internal/jwt"
 	repository2 "github.com/gam6itko/go-musthave-diploma/internal/repository"
 	"log"
 	"net/http"
@@ -16,9 +17,9 @@ type WithdrawalController struct {
 	userRepo *repository2.UserRepository
 }
 
-func NewWithdrawalController(wRepo *repository2.WithdrawalRepository, userRepo *repository2.UserRepository) *WithdrawalController {
+func NewWithdrawalController(jwtParser jwt.IParser, wRepo *repository2.WithdrawalRepository, userRepo *repository2.UserRepository) *WithdrawalController {
 	return &WithdrawalController{
-		authTrait{},
+		authTrait{jwtParser},
 		wRepo,
 		userRepo,
 	}

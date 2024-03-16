@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/gam6itko/go-musthave-diploma/internal/accrual"
 	"github.com/gam6itko/go-musthave-diploma/internal/diploma"
+	"github.com/gam6itko/go-musthave-diploma/internal/jwt"
 	"github.com/gam6itko/go-musthave-diploma/internal/repository"
 	"io"
 	"log"
@@ -15,13 +16,13 @@ import (
 
 type OrderController struct {
 	authTrait
-	accClient *accrual.Client
-	orderRepo *repository.OrderRepository
+	accClient accrual.IClient
+	orderRepo repository.IOrderRepository
 }
 
-func NewOrderController(accClient *accrual.Client, orderRepo *repository.OrderRepository) *OrderController {
+func NewOrderController(jwtParser jwt.IParser, accClient accrual.IClient, orderRepo repository.IOrderRepository) *OrderController {
 	return &OrderController{
-		authTrait{},
+		authTrait{jwtParser},
 		accClient,
 		orderRepo,
 	}

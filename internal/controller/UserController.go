@@ -3,6 +3,7 @@ package controller
 import (
 	"encoding/json"
 	"github.com/gam6itko/go-musthave-diploma/internal/diploma"
+	"github.com/gam6itko/go-musthave-diploma/internal/jwt"
 	"github.com/gam6itko/go-musthave-diploma/internal/repository"
 	"log"
 	"net/http"
@@ -13,9 +14,9 @@ type UserController struct {
 	userRepo *repository.UserRepository
 }
 
-func NewUserController(userRepo *repository.UserRepository) *UserController {
+func NewUserController(jwtParser jwt.IParser, userRepo *repository.UserRepository) *UserController {
 	return &UserController{
-		authTrait{},
+		authTrait{jwtParser},
 		userRepo,
 	}
 }

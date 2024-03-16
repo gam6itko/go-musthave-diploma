@@ -70,11 +70,13 @@ func newRouter() chi.Router {
 	orderRepo := repository2.NewOrderRepository(_db)
 	wRepoRepo := repository2.NewWithdrawalRepository(_db)
 	// controllers
+	//todo не совсем правильно использовать _jwtIssuer,
+	//	лучше делать это в middleware и как-то прокидывать в контроллер user. Но пока я так не умею.
 	anonController := controller.NewAnonController(_jwtIssuer, userRepo)
-	userController := controller.NewUserController(userRepo)
-	orderController := controller.NewOrderController(_accClient, orderRepo)
-	wController := controller.NewWithdrawalController(wRepoRepo, userRepo)
-	// ниже попытка поиграться в DI и тестирование
+	userController := controller.NewUserController(_jwtIssuer, userRepo)
+	orderController := controller.NewOrderController(_jwtIssuer, _accClient, orderRepo)
+	wController := controller.NewWithdrawalController(_jwtIssuer, wRepoRepo, userRepo)
+
 	r.Post("/api/user/register", anonController.PostUserRegister)
 	r.Post("/api/user/login", anonController.PostUserLogin)
 	r.Post("/api/user/orders", orderController.PostUserOrders)

@@ -12,3 +12,9 @@ func Test_LuhnValidate(t *testing.T) {
 
 	assert.False(t, LuhnValidate(5580_4733_7202_4732))
 }
+
+func FuzzName(f *testing.F) {
+	f.Fuzz(func(t *testing.T, number uint64) {
+		LuhnValidate(number)
+	})
+}

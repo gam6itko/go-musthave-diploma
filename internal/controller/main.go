@@ -7,7 +7,7 @@ import (
 )
 
 type authTrait struct {
-	jwtIssuer jwt.IIssuerParser
+	jwtIssuer jwt.IParser
 }
 
 // аутентификация
