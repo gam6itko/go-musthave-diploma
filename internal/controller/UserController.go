@@ -11,10 +11,10 @@ import (
 
 type UserController struct {
 	authTrait
-	userRepo *repository.UserRepository
+	userRepo repository.IUserRepository
 }
 
-func NewUserController(jwtParser jwt.IParser, userRepo *repository.UserRepository) *UserController {
+func NewUserController(jwtParser jwt.IParser, userRepo repository.IUserRepository) *UserController {
 	return &UserController{
 		authTrait{jwtParser},
 		userRepo,
