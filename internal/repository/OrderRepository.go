@@ -89,7 +89,7 @@ func (ths OrderRepository) UpdateStatus(ctx context.Context, orderID uint64, sta
 	return
 }
 
-func (ths OrderRepository) FindByUserID(ctx context.Context, userID uint64) ([]*diploma.Order, error) {
+func (ths OrderRepository) FindByUserID(ctx context.Context, userID uint64) ([]diploma.Order, error) {
 	rows, err := ths.db.
 		QueryContext(
 			ctx,
@@ -100,13 +100,13 @@ func (ths OrderRepository) FindByUserID(ctx context.Context, userID uint64) ([]*
 		return nil, err
 	}
 	defer rows.Close()
-	return ths.rowsToOrders(rows)
+	return rowsToOrders(rows)
 }
 
-func (ths OrderRepository) rowsToOrders(rows *sql.Rows) ([]*diploma.Order, error) {
-	result := make([]*diploma.Order, 0)
+func rowsToOrders(rows *sql.Rows) ([]diploma.Order, error) {
+	result := make([]diploma.Order, 0)
 	for rows.Next() {
-		o := &diploma.Order{}
+		o := diploma.Order{}
 		err := rows.Scan(&o.ID, &o.UploadedAt, &o.UserID, &o.Status, &o.Accrual)
 		if err != nil {
 			return nil, err

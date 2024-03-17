@@ -20,7 +20,7 @@ func NewWithdrawalRepository(db *sql.DB) *WithdrawalRepository {
 	}
 }
 
-func (ths WithdrawalRepository) FindByUserID(ctx context.Context, userID uint64) ([]*diploma.Withdrawal, error) {
+func (ths WithdrawalRepository) FindByUserID(ctx context.Context, userID uint64) ([]diploma.Withdrawal, error) {
 	rows, err := ths.db.
 		QueryContext(
 			ctx,
@@ -31,13 +31,13 @@ func (ths WithdrawalRepository) FindByUserID(ctx context.Context, userID uint64)
 		return nil, err
 	}
 	defer rows.Close()
-	return ths.rowsToOrders(rows)
+	return rowsToWithdrawals(rows)
 }
 
-func (ths WithdrawalRepository) rowsToOrders(rows *sql.Rows) ([]*diploma.Withdrawal, error) {
-	result := make([]*diploma.Withdrawal, 0)
+func rowsToWithdrawals(rows *sql.Rows) ([]diploma.Withdrawal, error) {
+	result := make([]diploma.Withdrawal, 0)
 	for rows.Next() {
-		w := &diploma.Withdrawal{}
+		w := diploma.Withdrawal{}
 		err := rows.Scan(&w.ID, &w.UserID, &w.OrderID, &w.ProcessedAt, &w.Sum)
 		if err != nil {
 			return nil, err
