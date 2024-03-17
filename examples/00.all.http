@@ -37,6 +37,91 @@ Content-Type: application/json
 
     client.test("Response has Authorization header", function () {
         client.assert(response.headers.valueOf('Authorization') !== '', "No Authorization header");
+
+        let parts = response.headers.valueOf('Authorization').split()
+        client.global.set('jwt', parts[1])
     });
 %}
 
+
+### Post order
+
+< {%
+    function generateOrderNumber() {
+        const minSteps = 5
+        const maxSteps = 15
+        let digitsCount = Math.floor(Math.random() * (maxSteps - minSteps + 1) + minSteps)
+        let ds = Math.floor(Math.random() * 10 ** digitsCount)
+        let cd = luhnCheckDigit(ds)
+        return `${ds}${cd}`
+    }
+
+    function luhnCheckDigit(number) {
+        let checkNumber = luhnChecksum(number)
+
+        if (checkNumber == 0) {
+            return 0
+        }
+        return 10 - checkNumber
+    }
+
+    function luhnChecksum(number) {
+        let luhn = 0
+
+        for (let i = 0; number > 0; i++) {
+            let cur = number % 10
+
+            if (i % 2 == 0) {
+                cur = cur * 2
+                if (cur > 9) {
+                    cur = cur % 10 + Math.floor(cur / 10)
+                }
+            }
+
+            luhn += cur
+            number =  Math.floor(number / 10)
+        }
+        return luhn % 10
+    }
+
+    let luhn = generateOrderNumber();
+    request.variables.set("orderNumber", luhn)
+%}
+
+POST {{host}}/api/user/orders
+Content-Type: text/plain
+Authorization: {{loginToken}}
+Accept-Encoding: none
+
+{{orderNumber}}
+
+> {%
+    client.test("Request executed successfully", function () {
+        client.assert(response.status === 202, response.body);
+    });
+%}
+
+
+### Get orders
+GET {{host}}/api/user/orders
+Content-Type: text/plain
+Authorization: {{loginToken}}
+Accept-Encoding: none
+
+> {%
+    client.test("Request executed successfully", function () {
+        client.assert(response.status === 200, response.body);
+    });
+%}
+
+### Get withdrawals
+GET {{host}}/api/user/withdrawals
+Content-Type: text/plain
+Authorization: {{loginToken}}
+Accept-Encoding: none
+
+> {%
+    client.test("Request executed successfully", function () {
+        client.assert(response.status === 200, response.body);
+    });
+%}

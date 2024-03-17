@@ -1,0 +1,8 @@
+@jwt = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MDkwMTY5ODgsImlhdCI6MTcwODkzMDU4OCwiVXNlcklEIjozNH0.7VXtmuSyae9TDelAgyBRePLHgKeQfxnoDPz9PuR1kRQ
+
+POST {{host}}/api/user/orders
+Content-Type: text/plain
+Authorization: Bearer {{jwt}}
+Accept-Encoding: none
+
+3571387

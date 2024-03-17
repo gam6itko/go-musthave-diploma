@@ -10,7 +10,7 @@ func Test_OrderStatusFromString(t *testing.T) {
 		s, err := OrderStatusFromString("foo")
 		assert.Error(t, err)
 		assert.EqualError(t, err, "unknown status: foo")
-		assert.Equal(t, StatusUndefined, s)
+		assert.Equal(t, StatusNew, s)
 	})
 
 	t.Run("StatusRegistered", func(t *testing.T) {

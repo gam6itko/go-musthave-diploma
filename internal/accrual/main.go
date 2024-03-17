@@ -1,31 +1,36 @@
-package diploma
+package accrual
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/gam6itko/go-musthave-diploma/internal/diploma"
 	"net/http"
 	"strings"
 )
 
-type AccuralClient struct {
+type IClient interface {
+	Get(orderID uint64) (acc *diploma.Accrual, err error)
+}
+
+type Client struct {
 	httpClient *http.Client
 	host       string
 }
 
-func NewAccuralClient(httpClient *http.Client, host string) *AccuralClient {
+func NewAccrualClient(httpClient *http.Client, host string) *Client {
 	host = strings.TrimRight(host, "/")
 	if !strings.Contains(host, "://") {
 		host = fmt.Sprintf("http://%s", host)
 	}
 
-	return &AccuralClient{
+	return &Client{
 		httpClient,
 		host,
 	}
 }
 
-func (ths AccuralClient) Get(orderID uint64) (acc *Accural, err error) {
+func (ths Client) Get(orderID uint64) (acc *diploma.Accrual, err error) {
 	resp, err := ths.httpClient.Get(
 		fmt.Sprintf("%s/api/orders/%d", ths.host, orderID),
 	)
@@ -52,6 +57,7 @@ func (ths AccuralClient) Get(orderID uint64) (acc *Accural, err error) {
 
 	decoder := json.NewDecoder(resp.Body)
 	defer resp.Body.Close()
+	acc = new(diploma.Accrual)
 	err = decoder.Decode(acc)
 	if err != nil {
 		return

@@ -18,7 +18,7 @@ var _appConfig *appConfig
 
 func init() {
 	if err := godotenv.Load(); err != nil {
-		log.Fatal(err)
+		log.Print(err)
 	}
 
 	_appConfig = buildAppConfig()
@@ -40,7 +40,7 @@ func buildAppConfig() *appConfig {
 func fillFromArgs(c *appConfig) {
 	listenAdd := flag.String("a", "", "Net address host:port")
 	dbDsn := flag.String("d", "", "Database DSN")
-	accuralAddr := flag.String("r", "", "accural system address")
+	accrualAddr := flag.String("r", "", "accrual system address")
 	flag.Parse()
 
 	if *listenAdd != "" {
@@ -49,8 +49,8 @@ func fillFromArgs(c *appConfig) {
 	if *dbDsn != "" {
 		c.dbDsn = *dbDsn
 	}
-	if *accuralAddr != "" {
-		c.listenAdd = *accuralAddr
+	if *accrualAddr != "" {
+		c.listenAdd = *accrualAddr
 	}
 }
 

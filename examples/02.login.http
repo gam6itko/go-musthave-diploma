@@ -1,8 +1,9 @@
-@login = user
-@password = pass
+@login = VWw3gtmHfXdwi
+@password = ghjj51IYhKKxmA5wzyz0EeH6m61hq
 
 POST {{host}}/api/user/login?{{login}}
 Content-Type: application/json
+Accept-Encoding: none
 
 {
   "login": "{{login}}",

@@ -2,7 +2,10 @@ package main
 
 import (
 	"database/sql"
-	"github.com/gam6itko/go-musthave-diploma/internal/diploma"
+	"github.com/gam6itko/go-musthave-diploma/internal/accrual"
+	"github.com/gam6itko/go-musthave-diploma/internal/controller"
+	"github.com/gam6itko/go-musthave-diploma/internal/jwt"
+	repository2 "github.com/gam6itko/go-musthave-diploma/internal/repository"
 	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"log"
@@ -10,8 +13,8 @@ import (
 )
 
 var _db *sql.DB
-var _jwtIssuer *diploma.JWTIssuer
-var _accClient *diploma.AccuralClient
+var _jwtIssuer *jwt.Issuer
+var _accClient *accrual.Client
 
 func init() {
 
@@ -24,10 +27,10 @@ func init() {
 		log.Fatal(err)
 	}
 
-	_jwtIssuer = diploma.NewJWTIssuer(_appConfig.jwtKey)
+	_jwtIssuer = jwt.NewIssuer(_appConfig.jwtKey)
 
 	httpClient := &http.Client{}
-	_accClient = diploma.NewAccuralClient(
+	_accClient = accrual.NewAccrualClient(
 		httpClient,
 		_appConfig.accrualAddr,
 	)
@@ -38,35 +41,7 @@ func init() {
 
 }
 
-func initDatabaseSchema(db *sql.DB) error {
-	if err := db.Ping(); err != nil {
-		return err
-	}
-
-	// server_init.sql
-	sqlQuery := `CREATE TABLE IF NOT EXISTS public.user
-(
-    id       BIGSERIAL PRIMARY KEY,
-    login varchar,
-    password varchar
-);
-
-CREATE TABLE IF NOT EXISTS public.order
-(
-    id  int PRIMARY KEY,
-    user_id BIGINT,
-    status smallint,
-    CONSTRAINT fk_user
-        FOREIGN KEY(user_id)
-            REFERENCES "user"(id)
-);`
-	_, err := db.Exec(sqlQuery)
-	return err
-}
-
 func main() {
-	//todo startAccuralPolling()
-
 	server := &http.Server{
 		Addr:    _appConfig.listenAdd,
 		Handler: newRouter(),
@@ -75,7 +50,7 @@ func main() {
 	log.Printf("Starting server on %s", _appConfig.listenAdd)
 	if err := server.ListenAndServe(); err != nil {
 		// записываем в лог ошибку, если сервер не запустился
-		log.Printf(err.Error())
+		log.Printf("http server error. %s", err)
 	}
 }
 
@@ -89,45 +64,26 @@ func newRouter() chi.Router {
 		})
 	})
 
-	r.Post("/api/user/register", postUserRegister)
-	r.Post("/api/user/login", postUserLogin)
-	r.Post("/api/user/orders", postUserOrders)
-	r.Get("/api/user/orders", getUserOrders)
-	r.Get("/api/user/balance", getUserBalance)
-	r.Post("/api/user/balance/withdraw", postUserBalanceWithdraw)
-	r.Get("/api/user/withdrawals", getUserWithdrawals)
+	r.Use(compressMiddleware)
+
+	userRepo := repository2.NewUserRepository(_db)
+	orderRepo := repository2.NewOrderRepository(_db)
+	wRepoRepo := repository2.NewWithdrawalRepository(_db)
+	// controllers
+	//todo не совсем правильно использовать _jwtIssuer,
+	//	лучше делать это в middleware и как-то прокидывать в контроллер user. Но пока я так не умею.
+	anonController := controller.NewAnonController(_jwtIssuer, userRepo)
+	userController := controller.NewUserController(_jwtIssuer, userRepo)
+	orderController := controller.NewOrderController(_jwtIssuer, _accClient, orderRepo)
+	wController := controller.NewWithdrawalController(_jwtIssuer, wRepoRepo, userRepo)
+
+	r.Post("/api/user/register", anonController.PostUserRegister)
+	r.Post("/api/user/login", anonController.PostUserLogin)
+	r.Post("/api/user/orders", orderController.PostUserOrders)
+	r.Get("/api/user/orders", orderController.GetUserOrders)
+	r.Get("/api/user/balance", userController.GetUserBalance)
+	r.Post("/api/user/balance/withdraw", wController.PostUserBalanceWithdraw)
+	r.Get("/api/user/withdrawals", wController.GetUserWithdrawals)
 
 	return r
 }
-
-//func startAccuralPolling() {
-//	repo := diploma.NewOrderRepository(_db)
-//
-//	ticker := time.NewTicker(5 * time.Second)
-//	for range ticker.C {
-//		orderList, err := repo.FindByStatus(context.TODO(), diploma.StatusProcessing)
-//		if err != nil {
-//			log.Printf("error: %s", err)
-//			continue
-//		}
-//
-//		for _, o := range orderList {
-//			acc, err := _accClient.Get(o.ID)
-//			if err != nil {
-//				log.Printf(err.Error())
-//			}
-//			accStatus, err := diploma.OrderStatusFromString(acc.Status)
-//			if err != nil {
-//				log.Printf("error. %s", err)
-//			}
-//			if o.Status == accStatus {
-//				continue
-//			}
-//
-//			err = repo.UpdateStatus(context.TODO(), o.ID, o.Status, o.Accural)
-//			if err != nil {
-//				log.Printf("update status error. %s", err)
-//			}
-//		}
-//	}
-//}

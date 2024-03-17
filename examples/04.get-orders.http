@@ -1,0 +1,4 @@
+GET {{host}}/api/user/orders
+Content-Type: text/plain
+Authorization: Bearer {{jwt}}
+Accept-Encoding: none
