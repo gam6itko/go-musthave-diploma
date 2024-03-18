@@ -11,7 +11,7 @@ type IOrderRepository interface {
 	FindByID(ctx context.Context, orderID uint64) (*diploma.Order, error)
 	InsertNew(ctx context.Context, order *diploma.Order) (err error)
 	UpdateStatus(ctx context.Context, orderID uint64, status diploma.OrderStatus, accrual float64) (err error)
-	FindByUserID(ctx context.Context, userID uint64) ([]*diploma.Order, error)
+	FindByUserID(ctx context.Context, userID uint64) ([]diploma.Order, error)
 }
 
 type OrderRepository struct {

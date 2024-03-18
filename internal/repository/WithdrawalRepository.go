@@ -7,7 +7,7 @@ import (
 )
 
 type IWithdrawalRepository interface {
-	FindByUserID(ctx context.Context, userID uint64) ([]*diploma.Withdrawal, error)
+	FindByUserID(ctx context.Context, userID uint64) ([]diploma.Withdrawal, error)
 }
 
 type WithdrawalRepository struct {
