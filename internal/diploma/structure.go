@@ -5,8 +5,8 @@ import (
 )
 
 type LoginPass struct {
-	Login    *string `json:"login"`
-	Password *string `json:"password"`
+	Login    string `json:"login"`
+	Password string `json:"password"`
 }
 
 type Claims struct {

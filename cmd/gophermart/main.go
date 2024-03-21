@@ -35,7 +35,7 @@ func init() {
 		_appConfig.accrualAddr,
 	)
 
-	if err := initDatabaseSchema(_db); err != nil {
+	if err := databaseSchema(_db); err != nil {
 		log.Fatalf("schema init error. %s", err)
 	}
 

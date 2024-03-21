@@ -51,17 +51,13 @@ func (ths AnonController) PostUserRegister(w http.ResponseWriter, r *http.Reques
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if l.Login == nil || l.Password == nil || len(*l.Login) == 0 || len(*l.Password) == 0 {
+	if l.Login == "" || l.Password == "" {
 		http.Error(w, "missing required credentials", http.StatusBadRequest)
-		return
-	}
-	if *l.Password == "123" {
-		http.Error(w, "password is to weak. try 'qwerty' ^_^", http.StatusBadRequest)
 		return
 	}
 
 	// check user exists
-	u, err := ths.userRepo.FindByLogin(r.Context(), *l.Login)
+	u, err := ths.userRepo.FindByLogin(r.Context(), l.Login)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -71,12 +67,12 @@ func (ths AnonController) PostUserRegister(w http.ResponseWriter, r *http.Reques
 	}
 
 	// user save
-	hashPass, err := bcrypt.GenerateFromPassword([]byte(*l.Password), bcrypt.DefaultCost)
+	hashPass, err := bcrypt.GenerateFromPassword([]byte(l.Password), bcrypt.DefaultCost)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	userID, err := ths.userRepo.InsertNew(r.Context(), *l.Login, string(hashPass))
+	userID, err := ths.userRepo.InsertNew(r.Context(), l.Login, string(hashPass))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -112,7 +108,7 @@ func (ths AnonController) PostUserLogin(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	u, err := ths.userRepo.FindByLogin(r.Context(), *l.Login)
+	u, err := ths.userRepo.FindByLogin(r.Context(), l.Login)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -122,7 +118,7 @@ func (ths AnonController) PostUserLogin(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err = bcrypt.CompareHashAndPassword(u.PasswordHash, []byte(*l.Password)); err != nil {
+	if err = bcrypt.CompareHashAndPassword(u.PasswordHash, []byte(l.Password)); err != nil {
 		// wrong user or password
 		http.Error(w, "wrong user password ^_^", http.StatusUnauthorized)
 		return

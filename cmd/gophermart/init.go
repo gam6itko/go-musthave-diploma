@@ -2,7 +2,7 @@ package main
 
 import "database/sql"
 
-func initDatabaseSchema(db *sql.DB) error {
+func databaseSchema(db *sql.DB) error {
 	if err := db.Ping(); err != nil {
 		return err
 	}
