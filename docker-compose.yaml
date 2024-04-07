@@ -2,7 +2,7 @@ version: '3.1'
 
 services:
   postgres:
-    container_name: yp-diploma-postgres
+    container_name: yp-musthave-diploma-postgres
     image: postgres:13
     environment:
       POSTGRES_DB: yp_diploma
